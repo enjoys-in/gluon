@@ -90,6 +90,8 @@ func NewParser(s *rfcparser.Scanner, options ...Option) *Parser {
 		"id":           &IDCommandParser{},
 		"getquota":     &GetQuotaCommandParser{},
 		"getquotaroot": &GetQuotaRootCommandParser{},
+		"sort":         &SortCommandParser{},
+		"thread":       &ThreadCommandParser{},
 	}
 
 	if !builder.disableIMAPAuthenticate {

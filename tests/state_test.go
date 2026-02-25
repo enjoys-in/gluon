@@ -47,6 +47,8 @@ var (
 		`MOVE 1 INBOX`,
 		`UID COPY 1 INBOX`,
 		`UID MOVE 1 INBOX`,
+		`SORT (DATE) UTF-8 ALL`,
+		`THREAD REFERENCES UTF-8 ALL`,
 	}
 )
 
