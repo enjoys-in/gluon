@@ -291,12 +291,12 @@ func (s *Session) WriteResponse(res string) error {
 	return nil
 }
 
-func (s *Session) logIncoming(line string) {
+func (s *Session) logIncoming(line []byte) {
 	if s.inLogger == nil {
 		return
 	}
 
-	writeLog(s.inLogger, "C", strconv.Itoa(s.sessionID), line)
+	writeLogBytes(s.inLogger, "C", strconv.Itoa(s.sessionID), line)
 }
 
 func (s *Session) logOutgoing(line string) {

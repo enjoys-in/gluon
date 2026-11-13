@@ -131,7 +131,7 @@ func singlePartStructure(section *rfc822.Section, fields *paramList, writer *dua
 		addNumber(writer, len(section.Body()))
 
 	if mimeType == "message" && mimeSubType == "rfc822" {
-		child := rfc822.Parse(section.Body())
+		child := rfc822.ParseNoAlloc(section.Body())
 
 		header, err := child.ParseHeader()
 		if err != nil {
