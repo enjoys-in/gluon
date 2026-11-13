@@ -40,7 +40,7 @@ func (s *Session) handleSort(ctx context.Context, tag string, cmd *command.Sort,
 	}
 
 	select {
-	case ch <- response.Sort(seq...):
+	case ch <- newSortResponse(ctx, tag, cmd, seq):
 
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -55,4 +55,13 @@ func (s *Session) handleSort(ctx context.Context, tag string, cmd *command.Sort,
 	return response.Ok(tag).
 		WithItems(items...).
 		WithMessage(okMessage(ctx)), nil
+}
+
+func newSortResponse(ctx context.Context, tag string, cmd *command.Sort, seq []uint32) response.Response {
+	if len(cmd.Return) == 0 {
+		return response.Sort(seq...)
+	}
+
+	// RFC5267 ESORT Extension
+	return withSearchReturnOptions(response.ESort(tag, contexts.IsUID(ctx), seq...), cmd.Return)
 }

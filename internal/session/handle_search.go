@@ -71,9 +71,16 @@ func newSearchResponse(ctx context.Context, tag string, cmd *command.Search, seq
 	}
 
 	// RFC4731 ESEARCH Extension
-	res := response.ESearch(tag, contexts.IsUID(ctx), seq...)
+	return withSearchReturnOptions(response.ESearch(tag, contexts.IsUID(ctx), seq...), cmd.Return)
+}
 
-	for _, opt := range cmd.Return {
+func withSearchReturnOptions[T interface {
+	WithMin() T
+	WithMax() T
+	WithAll() T
+	WithCount() T
+}](res T, opts []command.SearchReturnOption) T {
+	for _, opt := range opts {
 		switch opt {
 		case command.SearchReturnMin:
 			res.WithMin()

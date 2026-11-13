@@ -6,10 +6,11 @@ import (
 )
 
 type esearch struct {
-	tag   string
-	uid   bool
-	seqs  []uint32
-	items []string
+	tag     string
+	uid     bool
+	seqs    []uint32
+	items   []string
+	ordered bool
 }
 
 func ESearch(tag string, uid bool, seqs ...uint32) *esearch {
@@ -19,6 +20,17 @@ func ESearch(tag string, uid bool, seqs ...uint32) *esearch {
 		tag:  tag,
 		uid:  uid,
 		seqs: seqs,
+	}
+}
+
+// ESort is the ESEARCH response to SORT (RFC 5267). The numbers stay in sort order: MIN and MAX are the first and
+// the last of them and ALL lists them one by one.
+func ESort(tag string, uid bool, seqs ...uint32) *esearch {
+	return &esearch{
+		tag:     tag,
+		uid:     uid,
+		seqs:    seqs,
+		ordered: true,
 	}
 }
 
@@ -39,7 +51,9 @@ func (r *esearch) WithMax() *esearch {
 }
 
 func (r *esearch) WithAll() *esearch {
-	if len(r.seqs) > 0 {
+	if len(r.seqs) > 0 && r.ordered {
+		r.items = append(r.items, string(appendSeqList([]byte("ALL "), r.seqs)))
+	} else if len(r.seqs) > 0 {
 		r.items = append(r.items, string(appendSeqSet([]byte("ALL "), r.seqs)))
 	}
 
@@ -85,6 +99,19 @@ func appendSeqSet(dst []byte, sorted []uint32) []byte {
 			dst = append(dst, ':')
 			dst = strconv.AppendUint(dst, uint64(end), 10)
 		}
+	}
+
+	return dst
+}
+
+// appendSeqList writes the numbers in the given order, separated by commas.
+func appendSeqList(dst []byte, seqs []uint32) []byte {
+	for i, seq := range seqs {
+		if i > 0 {
+			dst = append(dst, ',')
+		}
+
+		dst = strconv.AppendUint(dst, uint64(seq), 10)
 	}
 
 	return dst

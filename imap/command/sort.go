@@ -27,6 +27,7 @@ type Sort struct {
 	SortKeys []SortKey
 	Charset  string
 	Keys     []SearchKey
+	Return   []SearchReturnOption
 }
 
 func (s Sort) String() string {
@@ -52,6 +53,11 @@ func (SortCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
 	// sort-key = "ARRIVAL" / "CC" / "DATE" / "FROM" / "SIZE" / "SUBJECT" / "TO"
 
 	if err := p.Consume(rfcparser.TokenTypeSP, "expected space after SORT"); err != nil {
+		return nil, err
+	}
+
+	returnOpts, err := parseSortReturnOptions(p)
+	if err != nil {
 		return nil, err
 	}
 
@@ -105,7 +111,31 @@ func (SortCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
 		SortKeys: sortKeys,
 		Charset:  charset.Value,
 		Keys:     keys,
+		Return:   returnOpts,
 	}, nil
+}
+
+func parseSortReturnOptions(p *rfcparser.Parser) ([]SearchReturnOption, error) {
+	// RFC 5267 ESORT: sort =/ "SORT" SP "RETURN" SP "(" [search-return-opt *(SP search-return-opt)] ")" SP sort-criteria ...
+	if p.Check(rfcparser.TokenTypeLParen) {
+		return nil, nil
+	}
+
+	keyword, err := readSearchKeyword(p)
+	if err != nil {
+		return nil, err
+	}
+
+	if keyword.Value != "return" {
+		return nil, p.MakeErrorAtOffset("expected '(' for sort criteria", keyword.Offset)
+	}
+
+	opts, err := parseSearchReturnOptions(p)
+	if err != nil {
+		return nil, err
+	}
+
+	return opts, p.Consume(rfcparser.TokenTypeSP, "expected space after return options")
 }
 
 func parseSortCriteria(p *rfcparser.Parser) ([]SortKey, error) {
