@@ -75,7 +75,8 @@ func (s *Session) handleCommand(
 		*command.Status,
 		*command.Append,
 		*command.GetQuota,
-		*command.GetQuotaRoot:
+		*command.GetQuotaRoot,
+		*command.Namespace:
 		return s.handleAuthenticatedCommand(ctx, tag, cmd, ch)
 	case
 		*command.Check,
@@ -210,6 +211,10 @@ func (s *Session) handleAuthenticatedCommand(
 	case *command.GetQuotaRoot:
 		// RFC 2087 GETQUOTAROOT Command
 		return s.handleGetQuotaRoot(ctx, tag, cmd, ch)
+
+	case *command.Namespace:
+		// RFC 2342 NAMESPACE Command
+		return s.handleNamespace(ctx, tag, cmd, ch)
 
 	default:
 		return fmt.Errorf("bad command")

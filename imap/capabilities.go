@@ -14,13 +14,14 @@ const (
 	QUOTA            Capability = `QUOTA`
 	SORT             Capability = `SORT`
 	ThreadReferences Capability = `THREAD=REFERENCES`
+	NAMESPACE        Capability = `NAMESPACE`
 )
 
 func IsCapabilityAvailableBeforeAuth(c Capability) bool {
 	switch c {
 	case IMAP4rev1, StartTLS, IDLE, ID, AUTHPLAIN:
 		return true
-	case UNSELECT, UIDPLUS, MOVE, QUOTA, SORT, ThreadReferences:
+	case UNSELECT, UIDPLUS, MOVE, QUOTA, SORT, ThreadReferences, NAMESPACE:
 		return false
 	}
 
