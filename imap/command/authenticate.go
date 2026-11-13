@@ -29,7 +29,7 @@ const (
 )
 
 func (AuthenticateCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
-	// authenticate = "AUTHENTICATE" SP auth-type CRLF base64
+	// authenticate = "AUTHENTICATE" SP auth-type [SP (base64 / "=")] CRLF base64
 	// auth-type    = atom
 	// base64       = base64 encoded string
 	if err := p.Consume(rfcparser.TokenTypeSP, "expected space after command"); err != nil {
@@ -45,7 +45,28 @@ func (AuthenticateCommandParser) FromParser(p *rfcparser.Parser) (Payload, error
 		return nil, p.MakeError(messageUnsupportedAuthenticationMechanism)
 	}
 
+	// RFC 4959 SASL-IR: the initial response follows the mechanism and no continuation is sent.
+	if ok, err := p.Matches(rfcparser.TokenTypeSP); err != nil {
+		return nil, err
+	} else if ok {
+		return parseAuthInitialResponse(p)
+	}
+
 	return parseAuthInputString(p)
+}
+
+func parseAuthInitialResponse(p *rfcparser.Parser) (*Authenticate, error) {
+	parsed, err := p.ParseAString()
+	if err != nil {
+		return nil, err
+	}
+
+	// "=" stands for an empty initial response.
+	if parsed.Value == "=" {
+		return nil, p.MakeError(messageInvalidAuthenticationData)
+	}
+
+	return parseAuthData(p, parsed.Value)
 }
 
 func parseAuthInputString(p *rfcparser.Parser) (*Authenticate, error) {
@@ -63,6 +84,10 @@ func parseAuthInputString(p *rfcparser.Parser) (*Authenticate, error) {
 		return nil, p.MakeError(messageClientAbortedAuthentication)
 	}
 
+	return parseAuthData(p, input)
+}
+
+func parseAuthData(p *rfcparser.Parser, input string) (*Authenticate, error) {
 	decoded, err := base64.StdEncoding.DecodeString(input)
 	if err != nil {
 		return nil, p.MakeError(messageInvalidBase64Content)

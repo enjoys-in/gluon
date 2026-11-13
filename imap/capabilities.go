@@ -21,11 +21,12 @@ const (
 	ListStatus       Capability = `LIST-STATUS`
 	ESEARCH          Capability = `ESEARCH`
 	LiteralPlus      Capability = `LITERAL+`
+	SASLIR           Capability = `SASL-IR`
 )
 
 func IsCapabilityAvailableBeforeAuth(c Capability) bool {
 	switch c {
-	case IMAP4rev1, StartTLS, IDLE, ID, AUTHPLAIN, LiteralPlus:
+	case IMAP4rev1, StartTLS, IDLE, ID, AUTHPLAIN, LiteralPlus, SASLIR:
 		return true
 	case UNSELECT, UIDPLUS, MOVE, QUOTA, SORT, ThreadReferences, NAMESPACE,
 		CHILDREN, SpecialUse, ListExtended, ListStatus, ESEARCH:

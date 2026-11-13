@@ -124,7 +124,7 @@ func New(
 	}
 
 	if !disableIMAPAuthenticate {
-		caps = append(caps, imap.AUTHPLAIN)
+		caps = append(caps, imap.AUTHPLAIN, imap.SASLIR)
 	}
 
 	return &Session{
