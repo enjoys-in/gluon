@@ -16,6 +16,7 @@ var (
 	ErrReadOnly    = errors.New("the mailbox is read-only")
 
 	ErrTLSUnavailable       = errors.New("TLS is unavailable")
+	ErrTLSActive            = errors.New("TLS is already active")
 	ErrNotAuthenticated     = errors.New("session is not authenticated")
 	ErrAlreadyAuthenticated = errors.New("session is already authenticated")
 

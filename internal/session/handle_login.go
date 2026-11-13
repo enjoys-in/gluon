@@ -38,7 +38,7 @@ func (s *Session) handleLogin(ctx context.Context, tag string, cmd *command.Logi
 
 	s.state = state
 
-	ch <- response.Ok(tag).WithItems(response.ItemCapability(s.caps...)).WithMessage("Logged in")
+	ch <- response.Ok(tag).WithItems(response.ItemCapability(s.advertised(s.caps)...)).WithMessage("Logged in")
 
 	s.eventCh <- events.Login{
 		SessionID: s.sessionID,

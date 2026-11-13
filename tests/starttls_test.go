@@ -11,5 +11,19 @@ func TestStartTLS(t *testing.T) {
 
 		c.C("A002 noop")
 		c.OK("A002")
+
+		c.C("A003 capability")
+		c.S(`* CAPABILITY AUTH=PLAIN ID IDLE IMAP4rev1`)
+		c.OK("A003")
+
+		c.C("A004 starttls")
+		c.S("A004 NO TLS is already active")
+
+		c.C("A005 login user pass")
+		c.S(`A005 OK [CAPABILITY AUTH=PLAIN ID IDLE IMAP4rev1 MOVE QUOTA SORT THREAD=REFERENCES UIDPLUS UNSELECT] Logged in`)
+
+		c.C("A006 capability")
+		c.S(`* CAPABILITY AUTH=PLAIN ID IDLE IMAP4rev1 MOVE QUOTA SORT THREAD=REFERENCES UIDPLUS UNSELECT`)
+		c.OK("A006")
 	})
 }

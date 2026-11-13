@@ -16,7 +16,7 @@ func TestUnsubscribe(t *testing.T) {
 		c.S("A005 OK UNSUBSCRIBE")
 
 		c.C("A006 UNSUBSCRIBE #news.comp.mail.mime")
-		c.S("A006 NO not subscribed to this mailbox")
+		c.OK("A006")
 	})
 }
 

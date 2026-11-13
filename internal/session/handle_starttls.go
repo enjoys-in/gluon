@@ -10,7 +10,11 @@ import (
 
 func (s *Session) handleStartTLS(tag string, _ *command.StartTLS) error {
 	if s.tlsConfig == nil {
-		return response.No(tag).WithError(ErrTLSUnavailable)
+		return response.No(tag).WithError(ErrTLSUnavailable).Send(s)
+	}
+
+	if s.tlsActive() {
+		return response.No(tag).WithError(ErrTLSActive).Send(s)
 	}
 
 	if err := response.Ok(tag).WithMessage("Begin TLS negotiation now").Send(s); err != nil {

@@ -13,7 +13,7 @@ func (s *Session) getCaps() []imap.Capability {
 	defer s.userLock.Unlock()
 
 	if s.state != nil {
-		return s.caps
+		return s.advertised(s.caps)
 	}
 
 	var caps []imap.Capability
@@ -23,7 +23,7 @@ func (s *Session) getCaps() []imap.Capability {
 		}
 	}
 
-	return caps
+	return s.advertised(caps)
 }
 
 func (s *Session) handleCapability(_ context.Context, tag string, _ *command.Capability, ch chan response.Response) error {
