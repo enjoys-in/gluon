@@ -219,13 +219,13 @@ func (p *Parser) Parse() (Command, error) {
 	}
 
 	if err := p.parser.Consume(rfcparser.TokenTypeCR, "expected CR"); err != nil {
-		return Command{}, err
+		return Command{Tag: result.Tag}, err
 	}
 
 	// Can't fully consume the last new line here or we will hang forever as the clients don't send the next token.
 	// In the next loop, the call to advance will ensure the next token in the stream gets loaded properly.
 	if !p.parser.Check(rfcparser.TokenTypeLF) {
-		return Command{}, p.parser.MakeError("expected LF after CR")
+		return Command{Tag: result.Tag}, p.parser.MakeError("expected LF after CR")
 	}
 
 	return result, nil

@@ -77,10 +77,10 @@ func TestNamespaceNotAuthenticated(t *testing.T) {
 func TestNamespaceRejectsArguments(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t), func(c *testConnection, _ *testSession) {
 		c.C("A001 NAMESPACE INBOX")
-		c.Sx(`BAD .*expected CR`)
+		c.Sx(`^A001 BAD .*expected CR`)
 
 		c.C(`A002 NAMESPACE ""`)
-		c.Sx(`BAD .*expected CR`)
+		c.Sx(`^A002 BAD .*expected CR`)
 
 		c.C("A003 NAMESPACE")
 		c.S(`* NAMESPACE (("" "/")) NIL NIL`)
