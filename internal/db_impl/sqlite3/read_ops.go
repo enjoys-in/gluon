@@ -171,6 +171,60 @@ func (r readOps) GetMailboxMessageCount(ctx context.Context, mboxID imap.Interna
 	return utils.MapQueryRow[int](ctx, r.qw, query)
 }
 
+func (r readOps) GetMailboxUnseenCount(ctx context.Context, mboxID imap.InternalMailboxID) (int, error) {
+	spellings, err := r.getFlagSpellings(ctx, imap.FlagSeen)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(spellings) == 0 {
+		return r.GetMailboxMessageCount(ctx, mboxID)
+	}
+
+	query := fmt.Sprintf("SELECT COUNT(*) FROM %[1]v AS m WHERE NOT EXISTS ("+
+		"SELECT 1 FROM `%[2]v` AS f WHERE `f`.`%[3]v` IN (%[4]v) AND `f`.`%[5]v` = `m`.`%[6]v`)",
+		v1.MailboxMessageTableName(mboxID),
+		v1.MessageFlagsTableName,
+		v1.MessageFlagsFieldValue,
+		utils.GenSQLIn(len(spellings)),
+		v1.MessageFlagsFieldMessageID,
+		v1.MailboxMessagesFieldMessageID,
+	)
+
+	return utils.MapQueryRow[int](ctx, r.qw, query, utils.MapSliceToAny(spellings)...)
+}
+
+// getFlagSpellings returns how a flag is spelled in the stored message flags, which are compared ignoring case.
+func (r readOps) getFlagSpellings(ctx context.Context, flag string) ([]string, error) {
+	// Every spelling sorts between the upper case and the lower case one, so only that part of the index is read.
+	bound, op, lower := strings.ToUpper(flag), ">=", strings.ToLower(flag)
+
+	var spellings []string
+
+	for {
+		query := fmt.Sprintf("SELECT MIN(`%[1]v`) FROM `%[2]v` WHERE `%[1]v` %[3]v ? AND `%[1]v` <= ?",
+			v1.MessageFlagsFieldValue,
+			v1.MessageFlagsTableName,
+			op,
+		)
+
+		next, err := utils.MapQueryRow[sql.NullString](ctx, r.qw, query, bound, lower)
+		if err != nil {
+			return nil, err
+		}
+
+		if !next.Valid {
+			return spellings, nil
+		}
+
+		if strings.EqualFold(next.String, flag) {
+			spellings = append(spellings, next.String)
+		}
+
+		bound, op = next.String, ">"
+	}
+}
+
 func (r readOps) GetMailboxMessageCountWithRemoteID(ctx context.Context, mboxID imap.MailboxID) (int, error) {
 	internalID, err := r.GetMailboxIDFromRemoteID(ctx, mboxID)
 	if err != nil {

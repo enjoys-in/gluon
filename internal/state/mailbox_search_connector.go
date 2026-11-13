@@ -48,17 +48,27 @@ func (m *Mailbox) SearchWithConnector(ctx context.Context, keys []command.Search
 		return nil, false, err
 	}
 
+	if len(messageIDs) == 0 {
+		return nil, true, nil
+	}
+
 	found := make(map[imap.MessageID]struct{}, len(messageIDs))
 	for _, messageID := range messageIDs {
 		found[messageID] = struct{}{}
 	}
 
-	op, err := buildSearchOpListWithKeys(m, local, decoder)
-	if err != nil {
-		return nil, false, err
+	var op *buildSearchOpResult
+
+	if len(local) > 0 {
+		if op, err = buildSearchOpListWithKeys(m, local, decoder); err != nil {
+			return nil, false, err
+		}
 	}
 
-	var result []uint32
+	var (
+		isUID  = contexts.IsUID(ctx)
+		result = make([]uint32, 0, min(len(found), m.snap.len()))
+	)
 
 	for i := range m.snap.len() {
 		msg, ok := m.snap.messages.getWithSeqID(imap.SeqID(uint32(i + 1)))
@@ -70,16 +80,18 @@ func (m *Mailbox) SearchWithConnector(ctx context.Context, keys []command.Search
 			continue
 		}
 
-		matches, err := applySearch(ctx, m, msg, op)
-		if err != nil {
-			return nil, false, err
+		if op != nil {
+			matches, err := applySearch(ctx, m, msg, op)
+			if err != nil {
+				return nil, false, err
+			}
+
+			if !matches {
+				continue
+			}
 		}
 
-		if !matches {
-			continue
-		}
-
-		if contexts.IsUID(ctx) {
+		if isUID {
 			result = append(result, uint32(msg.UID))
 		} else {
 			result = append(result, uint32(msg.Seq))

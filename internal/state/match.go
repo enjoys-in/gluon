@@ -39,6 +39,8 @@ func getMatches(
 		mailboxes[mbox.Name] = mbox
 	}
 
+	matchName := newMatcher(ref, pattern, delimiter)
+
 	for mboxName := range mailboxes {
 		select {
 		case <-ctx.Done():
@@ -48,7 +50,7 @@ func getMatches(
 		}
 
 		for _, superior := range append(listSuperiors(mboxName, delimiter), mboxName) {
-			matchedName, isMatched := match(ref, pattern, delimiter, superior)
+			matchedName, isMatched := matchName(superior)
 			if !isMatched {
 				continue
 			}
@@ -132,8 +134,13 @@ func prepareMatch(
 
 // GOMSRV-100: validate this implementation.
 func match(ref, pattern, del, mailboxName string) (string, bool) {
+	return newMatcher(ref, pattern, del)(mailboxName)
+}
+
+// newMatcher compiles the pattern once so that it can be applied to many mailbox names.
+func newMatcher(ref, pattern, del string) func(mailboxName string) (string, bool) {
 	if pattern == "" {
-		return matchRoot(ref, del)
+		return func(string) (string, bool) { return matchRoot(ref, del) }
 	}
 
 	rx := fmt.Sprintf("^%v", regexp.QuoteMeta(canon(ref+pattern, del)))
@@ -150,11 +157,15 @@ func match(ref, pattern, del, mailboxName string) (string, bool) {
 	// The character "%" is similar to "*", but it does not match a hierarchy delimiter.
 	rx = strings.ReplaceAll(rx, "%", fmt.Sprintf("[^%v]*", del))
 
-	if res := regexp.MustCompile(rx).FindAllString(mailboxName, 1); len(res) > 0 {
-		return res[0], true
-	}
+	compiled := regexp.MustCompile(rx)
 
-	return "", false
+	return func(mailboxName string) (string, bool) {
+		if loc := compiled.FindStringIndex(mailboxName); loc != nil {
+			return mailboxName[loc[0]:loc[1]], true
+		}
+
+		return "", false
+	}
 }
 
 // An empty ("" string) mailbox name argument is a special request to

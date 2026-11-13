@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/ProtonMail/gluon/imap"
 	"github.com/ProtonMail/gluon/imap/command"
@@ -12,8 +13,10 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
+var listStatusSkippedAttributes = []string{strings.ToLower(imap.AttrNoSelect), strings.ToLower(imap.AttrNonExistent)}
+
 func (s *Session) handleListExtended(ctx context.Context, tag string, cmd *command.List, ch chan response.Response) error {
-	var patterns []string
+	patterns := make([]string, 0, len(cmd.Extended.MoreMailboxes)+1)
 
 	for _, pattern := range cmd.Patterns() {
 		nameUTF8, err := s.decodeMailboxName(pattern)
@@ -38,8 +41,10 @@ func (s *Session) handleListExtended(ctx context.Context, tag string, cmd *comma
 		return err
 	}
 
+	encoder := utf7.Encoding.NewEncoder()
+
 	for _, match := range matches {
-		nameUtf7, err := utf7.Encoding.NewEncoder().String(match.Name)
+		nameUtf7, err := encoder.String(match.Name)
 		if err != nil {
 			return fmt.Errorf("failed to convert name to utf7")
 		}
@@ -56,7 +61,7 @@ func (s *Session) handleListExtended(ctx context.Context, tag string, cmd *comma
 		}
 
 		// RFC5819 LIST-STATUS Extension
-		if len(cmd.Extended.Return.Status) == 0 || match.Atts.ContainsAny(imap.AttrNoSelect, imap.AttrNonExistent) {
+		if len(cmd.Extended.Return.Status) == 0 || match.Atts.ContainsAnyUnchecked(listStatusSkippedAttributes...) {
 			continue
 		}
 

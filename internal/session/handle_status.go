@@ -3,7 +3,6 @@ package session
 import (
 	"context"
 
-	"github.com/ProtonMail/gluon/imap"
 	"github.com/ProtonMail/gluon/imap/command"
 	"github.com/ProtonMail/gluon/internal/response"
 	"github.com/ProtonMail/gluon/internal/state"
@@ -37,42 +36,46 @@ func (s *Session) statusItems(
 	attributes []command.StatusAttribute,
 	ch chan response.Response,
 ) ([]response.Item, error) {
-	var items []response.Item
+	status, ok, err := s.state.MailboxStatus(ctx, nameUTF8, attributes)
+	if err != nil {
+		return nil, err
+	}
 
-	if err := s.state.Mailbox(ctx, nameUTF8, func(mailbox *state.Mailbox) error {
-		if mailbox.Selected() {
-			if err := flush(ctx, mailbox, true, ch); err != nil {
-				return err
-			}
-		}
-
-		for _, att := range attributes {
-			switch att {
-			case command.StatusAttributeMessages:
-				items = append(items, response.ItemMessages(mailbox.Count()))
-
-			case command.StatusAttributeRecent:
-				items = append(items, response.ItemRecent(mailbox.GetMessagesWithFlagCount(imap.FlagRecent)))
-
-			case command.StatusAttributeUIDNext:
-				uidNext, err := mailbox.UIDNext(ctx)
-				if err != nil {
+	if !ok {
+		if err := s.state.Mailbox(ctx, nameUTF8, func(mailbox *state.Mailbox) error {
+			if mailbox.Selected() {
+				if err := flush(ctx, mailbox, true, ch); err != nil {
 					return err
 				}
-
-				items = append(items, response.ItemUIDNext(uidNext))
-
-			case command.StatusAttributeUIDValidity:
-				items = append(items, response.ItemUIDValidity(mailbox.UIDValidity()))
-
-			case command.StatusAttributeUnseen:
-				items = append(items, response.ItemUnseen(uint32(mailbox.GetMessagesWithoutFlagCount(imap.FlagSeen))))
 			}
-		}
 
-		return nil
-	}); err != nil {
-		return nil, err
+			status, err = mailbox.Status(ctx)
+
+			return err
+		}); err != nil {
+			return nil, err
+		}
+	}
+
+	items := make([]response.Item, 0, len(attributes))
+
+	for _, att := range attributes {
+		switch att {
+		case command.StatusAttributeMessages:
+			items = append(items, response.ItemMessages(status.Messages))
+
+		case command.StatusAttributeRecent:
+			items = append(items, response.ItemRecent(status.Recent))
+
+		case command.StatusAttributeUIDNext:
+			items = append(items, response.ItemUIDNext(status.UIDNext))
+
+		case command.StatusAttributeUIDValidity:
+			items = append(items, response.ItemUIDValidity(status.UIDValidity))
+
+		case command.StatusAttributeUnseen:
+			items = append(items, response.ItemUnseen(uint32(status.Unseen)))
+		}
 	}
 
 	return items, nil

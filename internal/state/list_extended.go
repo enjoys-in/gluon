@@ -2,14 +2,22 @@ package state
 
 import (
 	"context"
+	"iter"
 	"slices"
 	"strings"
 
 	"github.com/ProtonMail/gluon/db"
 	"github.com/ProtonMail/gluon/imap"
+	"github.com/bradenaw/juniper/xslices"
 )
 
 const ChildInfoSubscribed = "SUBSCRIBED"
+
+// Flag sets are keyed by the lower case flag, so these skip the conversion on every lookup.
+var (
+	specialUseAttributes = xslices.Map(imap.SpecialUseAttributes, strings.ToLower)
+	noInferiorsAttribute = strings.ToLower(imap.AttrNoInferiors)
+)
 
 type ListOptions struct {
 	SelectSubscribed     bool
@@ -17,6 +25,8 @@ type ListOptions struct {
 	SelectSpecialUse     bool
 	ReturnSubscribed     bool
 }
+
+type nameMatcher func(mailboxName string) (string, bool)
 
 func (state *State) ListExtended(
 	ctx context.Context,
@@ -75,7 +85,7 @@ func (state *State) listExisting(
 		matchMailboxes = append(matchMailboxes, matchMailbox{Name: mbox.Name, EntMBox: mbox})
 	}
 
-	matches := make(map[string]Match)
+	var matches map[string]Match
 
 	for _, pattern := range patterns {
 		patternMatches, err := getMatches(ctx, client, matchMailboxes, ref, pattern, state.delimiter, false)
@@ -83,12 +93,19 @@ func (state *State) listExisting(
 			return nil, err
 		}
 
-		for name, match := range patternMatches {
-			// An empty pattern returns the hierarchy root, which is not a mailbox.
-			if pattern == "" {
+		// An empty pattern returns the hierarchy root, which is not a mailbox.
+		if pattern == "" {
+			for name := range patternMatches {
 				roots[name] = struct{}{}
 			}
+		}
 
+		if matches == nil {
+			matches = patternMatches
+			continue
+		}
+
+		for name, match := range patternMatches {
 			if _, ok := matches[name]; !ok {
 				matches[name] = match
 			}
@@ -97,7 +114,7 @@ func (state *State) listExisting(
 
 	if opts.SelectSpecialUse {
 		for name, match := range matches {
-			if !match.Atts.ContainsAny(imap.SpecialUseAttributes...) {
+			if !match.Atts.ContainsAnyUnchecked(specialUseAttributes...) {
 				delete(matches, name)
 			}
 		}
@@ -136,24 +153,20 @@ func (state *State) listSubscribed(
 		return nil, err
 	}
 
-	existing := make(map[string]*db.MailboxWithAttr, len(mailboxes))
-	for _, mbox := range mailboxes {
-		existing[mbox.Name] = mbox
-	}
-
 	var (
+		matchers = newNameMatchers(ref, patterns, state.delimiter)
 		matches  = make(map[string]Match)
 		selected = make([]string, 0, len(subscribed))
 	)
 
 	for name, mbox := range subscribed {
-		if opts.SelectSpecialUse && (mbox == nil || !mbox.Attributes.ContainsAny(imap.SpecialUseAttributes...)) {
+		if opts.SelectSpecialUse && (mbox == nil || !mbox.Attributes.ContainsAnyUnchecked(specialUseAttributes...)) {
 			continue
 		}
 
 		selected = append(selected, name)
 
-		if !matchesAnyPattern(ref, patterns, state.delimiter, name) {
+		if !matchesAnyPattern(matchers, name) {
 			continue
 		}
 
@@ -171,14 +184,27 @@ func (state *State) listSubscribed(
 		return matches, nil
 	}
 
+	var existing map[string]*db.MailboxWithAttr
+
 	for _, name := range selected {
-		for _, superior := range listSuperiors(name, state.delimiter) {
-			if !matchesAnyPattern(ref, patterns, state.delimiter, superior) {
+		for superior := range superiors(name, state.delimiter) {
+			match, ok := matches[superior]
+			if ok && match.ChildInfo != nil {
 				continue
 			}
 
-			match, ok := matches[superior]
 			if !ok {
+				if !matchesAnyPattern(matchers, superior) {
+					continue
+				}
+
+				if existing == nil {
+					existing = make(map[string]*db.MailboxWithAttr, len(mailboxes))
+					for _, mbox := range mailboxes {
+						existing[mbox.Name] = mbox
+					}
+				}
+
 				if match, err = state.newListMatch(ctx, client, superior, existing[superior]); err != nil {
 					return nil, err
 				}
@@ -204,7 +230,7 @@ func (state *State) subscribedNames(
 		return nil, err
 	}
 
-	subscribed := make(map[string]*db.MailboxWithAttr)
+	subscribed := make(map[string]*db.MailboxWithAttr, len(mailboxes))
 
 	for _, mbox := range mailboxes {
 		delete(deletedSubscriptions, mbox.RemoteID)
@@ -250,13 +276,22 @@ func (state *State) newListMatch(
 	return match, err
 }
 
-func matchesAnyPattern(ref string, patterns []string, delimiter, name string) bool {
-	for _, pattern := range patterns {
-		if pattern == "" {
-			continue
-		}
+func newNameMatchers(ref string, patterns []string, delimiter string) []nameMatcher {
+	matchers := make([]nameMatcher, 0, len(patterns))
 
-		if matched, ok := match(ref, pattern, delimiter, name); ok && matched == name {
+	for _, pattern := range patterns {
+		if pattern != "" {
+			matchers = append(matchers, newMatcher(ref, pattern, delimiter))
+		}
+	}
+
+	return matchers
+}
+
+// matchesAnyPattern is true only when the whole name matches, not just one of its superiors.
+func matchesAnyPattern(matchers []nameMatcher, name string) bool {
+	for _, matchName := range matchers {
+		if matched, ok := matchName(name); ok && len(matched) == len(name) {
 			return true
 		}
 	}
@@ -271,10 +306,18 @@ func addChildAttributes(
 	delimiter string,
 	skip map[string]struct{},
 ) {
-	parents := make(map[string]struct{})
+	var parents map[string]struct{}
 
 	for _, mbox := range mailboxes {
-		for _, superior := range listSuperiors(mbox.Name, delimiter) {
+		for superior := range superiors(mbox.Name, delimiter) {
+			if _, ok := matches[superior]; !ok {
+				continue
+			}
+
+			if parents == nil {
+				parents = make(map[string]struct{})
+			}
+
 			parents[superior] = struct{}{}
 		}
 	}
@@ -284,7 +327,7 @@ func addChildAttributes(
 			continue
 		}
 
-		if match.Atts.Contains(imap.AttrNoInferiors) {
+		if match.Atts.ContainsUnchecked(noInferiorsAttribute) {
 			continue
 		}
 
@@ -292,6 +335,28 @@ func addChildAttributes(
 			match.Atts.AddToSelf(imap.AttrHasChildren)
 		} else {
 			match.Atts.AddToSelf(imap.AttrHasNoChildren)
+		}
+	}
+}
+
+// superiors yields every name above the given one in the hierarchy, without allocating.
+func superiors(name, delimiter string) iter.Seq[string] {
+	return func(yield func(string) bool) {
+		if delimiter == "" {
+			return
+		}
+
+		for end := strings.Index(name, delimiter); end >= 0; {
+			if !yield(name[:end]) {
+				return
+			}
+
+			next := strings.Index(name[end+len(delimiter):], delimiter)
+			if next < 0 {
+				return
+			}
+
+			end += len(delimiter) + next
 		}
 	}
 }

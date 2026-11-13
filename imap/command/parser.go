@@ -2,8 +2,6 @@ package command
 
 import (
 	"fmt"
-	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/ProtonMail/gluon/rfcparser"
@@ -116,8 +114,6 @@ func (p *Parser) LastParsedCommand() string {
 	return p.lastCmd
 }
 
-var nonSynchronizingLiteralSuffix = regexp.MustCompile(`\{(\d+)\+\}\r\n$`)
-
 // ConsumeInvalidInput will consume all remaining scanner input until a new line has been reached.
 func (p *Parser) ConsumeInvalidInput() error {
 	rest, err := p.scanner.ConsumeUntilNewLine()
@@ -125,17 +121,17 @@ func (p *Parser) ConsumeInvalidInput() error {
 		return err
 	}
 
-	line := append([]byte{p.parser.CurrentToken().Value}, rest...)
+	// The scanner reads one byte ahead, so the current token is the byte before the rest of the line.
+	lookahead := p.parser.CurrentToken().Value
 
 	// The data of a non-synchronizing literal (RFC 7888) is already on the wire and has to be discarded too.
 	for {
-		match := nonSynchronizingLiteralSuffix.FindSubmatch(line)
-		if match == nil {
+		size, ok := nonSynchronizingLiteralSize(lookahead, rest)
+		if !ok {
 			return nil
 		}
 
-		size, err := strconv.Atoi(string(match[1]))
-		if err != nil || size >= rfcparser.MaxLiteralSize {
+		if size >= rfcparser.MaxLiteralSize {
 			return fmt.Errorf("literal size exceeds maximum size of 70MB")
 		}
 
@@ -143,10 +139,46 @@ func (p *Parser) ConsumeInvalidInput() error {
 			return err
 		}
 
-		if line, err = p.scanner.ConsumeUntilNewLine(); err != nil {
+		if rest, err = p.scanner.ConsumeUntilNewLine(); err != nil {
 			return err
 		}
+
+		lookahead = 0
 	}
+}
+
+// nonSynchronizingLiteralSize reads the size of a "{n+}" marker that ends the line.
+func nonSynchronizingLiteralSize(lookahead byte, rest []byte) (int, bool) {
+	i := len(rest) - 1
+
+	for _, want := range [...]byte{'\n', '\r', '}', '+'} {
+		if i < 0 || rest[i] != want {
+			return 0, false
+		}
+
+		i--
+	}
+
+	size, digits := 0, 0
+
+	for scale := 1; i >= 0 && rest[i] >= '0' && rest[i] <= '9'; i, scale = i-1, scale*10 {
+		if digits++; digits > 9 {
+			return rfcparser.MaxLiteralSize, true
+		}
+
+		size += int(rest[i]-'0') * scale
+	}
+
+	opening := lookahead
+	if i >= 0 {
+		opening = rest[i]
+	}
+
+	if digits == 0 || opening != '{' {
+		return 0, false
+	}
+
+	return size, true
 }
 
 func (p *Parser) Parse() (Command, error) {

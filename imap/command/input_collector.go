@@ -1,6 +1,8 @@
 package command
 
 import (
+	"io"
+
 	"github.com/ProtonMail/gluon/rfcparser"
 )
 
@@ -45,6 +47,12 @@ func (i *InputCollector) ReadBytes(delim byte) ([]byte, error) {
 	}
 
 	return b, err
+}
+
+func (i *InputCollector) Discard(n int) error {
+	_, err := io.CopyN(io.Discard, i.source, int64(n))
+
+	return err
 }
 
 func (i *InputCollector) Reset() {

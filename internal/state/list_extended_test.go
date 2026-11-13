@@ -29,7 +29,7 @@ func TestMatchesAnyPattern(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.want, matchesAnyPattern(tc.ref, tc.patterns, "/", tc.mailbox))
+			require.Equal(t, tc.want, matchesAnyPattern(newNameMatchers(tc.ref, tc.patterns, "/"), tc.mailbox))
 		})
 	}
 }
@@ -81,4 +81,36 @@ func TestAddChildAttributesWithoutDelimiter(t *testing.T) {
 	addChildAttributes(matches, mailboxes, "", nil)
 
 	require.Equal(t, []string{imap.AttrHasNoChildren, imap.AttrUnmarked}, matches["Work"].Atts.ToSlice())
+}
+
+func TestSuperiors(t *testing.T) {
+	for _, tc := range []struct{ name, delimiter string }{
+		{name: "INBOX", delimiter: "/"},
+		{name: "Work/Reports", delimiter: "/"},
+		{name: "Work/Reports/2026/Q4", delimiter: "/"},
+		{name: "Work.Reports.2026", delimiter: "."},
+		{name: "/leading", delimiter: "/"},
+		{name: "trailing/", delimiter: "/"},
+		{name: "a::b::c", delimiter: "::"},
+		{name: "Work/Reports", delimiter: ""},
+		{name: "", delimiter: "/"},
+	} {
+		t.Run(tc.name+" "+tc.delimiter, func(t *testing.T) {
+			var got []string
+
+			for superior := range superiors(tc.name, tc.delimiter) {
+				got = append(got, superior)
+			}
+
+			require.Equal(t, listSuperiors(tc.name, tc.delimiter), got)
+		})
+	}
+}
+
+func TestSuperiorsStopsEarly(t *testing.T) {
+	for superior := range superiors("a/b/c/d", "/") {
+		require.Equal(t, "a", superior)
+
+		break
+	}
 }

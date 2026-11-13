@@ -108,7 +108,12 @@ func (s *Scanner) ConsumeUntilNewLine() ([]byte, error) {
 	return s.source.ReadBytes('\n')
 }
 
+// Discard skips n bytes. A source that keeps what it reads can implement Discard to skip without keeping them.
 func (s *Scanner) Discard(n int) error {
+	if source, ok := s.source.(interface{ Discard(n int) error }); ok {
+		return source.Discard(n)
+	}
+
 	_, err := io.CopyN(io.Discard, s.source, int64(n))
 
 	return err

@@ -93,6 +93,12 @@ func (r ReadTracer) GetMailboxRecentCount(ctx context.Context, mboxID imap.Inter
 	return r.RD.GetMailboxRecentCount(ctx, mboxID)
 }
 
+func (r ReadTracer) GetMailboxUnseenCount(ctx context.Context, mboxID imap.InternalMailboxID) (int, error) {
+	r.Entry.Tracef("GetMailboxUnseenCount")
+
+	return r.RD.GetMailboxUnseenCount(ctx, mboxID)
+}
+
 func (r ReadTracer) GetMailboxMessageCount(ctx context.Context, mboxID imap.InternalMailboxID) (int, error) {
 	r.Entry.Tracef("GetMailboxMessageCount")
 
