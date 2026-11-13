@@ -88,6 +88,8 @@ func (s *Session) handleCommand(
 		*command.Store,
 		*command.Copy,
 		*command.Move,
+		*command.Sort,
+		*command.Thread,
 		*command.UID:
 		return s.handleSelectedCommand(ctx, tag, cmd, ch)
 
@@ -301,6 +303,14 @@ func (s *Session) handleWithMailbox(
 	case *command.Move:
 		// RFC6851 MOVE Command
 		return s.handleMove(ctx, tag, cmd, mailbox, ch)
+
+	case *command.Sort:
+		// RFC5256 SORT Command
+		return s.handleSort(ctx, tag, cmd, mailbox, ch)
+
+	case *command.Thread:
+		// RFC5256 THREAD Command
+		return s.handleThread(ctx, tag, cmd, mailbox, ch)
 
 	default:
 		return nil, fmt.Errorf("bad command")

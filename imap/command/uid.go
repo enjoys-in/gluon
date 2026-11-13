@@ -30,6 +30,8 @@ func NewUIDCommandParser() *UIDCommandParser {
 			"search": &SearchCommandParser{},
 			"move":   &MoveCommandParser{},
 			"store":  &StoreCommandParser{},
+			"sort":   &SortCommandParser{},
+			"thread": &ThreadCommandParser{},
 		}}
 }
 

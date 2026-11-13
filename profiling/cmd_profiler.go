@@ -33,6 +33,10 @@ const (
 	CmdTypeUIDSearch
 	CmdTypeGetQuota
 	CmdTypeGetQuotaRoot
+	CmdTypeSort
+	CmdTypeThread
+	CmdTypeUIDSort
+	CmdTypeUIDThread
 	CmdTypeTotal
 )
 
@@ -102,6 +106,14 @@ func CmdTypeToString(cmdType int) string {
 		return "GQUOTA "
 	case CmdTypeGetQuotaRoot:
 		return "GQROOT "
+	case CmdTypeSort:
+		return "SORT   "
+	case CmdTypeThread:
+		return "THREAD "
+	case CmdTypeUIDSort:
+		return "USORT  "
+	case CmdTypeUIDThread:
+		return "UTHRD  "
 
 	default:
 		return "Unknown"

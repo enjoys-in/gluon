@@ -26,6 +26,12 @@ func (s *Session) handleUID(ctx context.Context, tag string, cmd *command.UID, m
 	case *command.Store:
 		return s.handleStore(contexts.AsUID(ctx), tag, cmd, mailbox, ch)
 
+	case *command.Sort:
+		return s.handleSort(contexts.AsUID(ctx), tag, cmd, mailbox, ch)
+
+	case *command.Thread:
+		return s.handleThread(contexts.AsUID(ctx), tag, cmd, mailbox, ch)
+
 	default:
 		panic("bad command")
 	}
