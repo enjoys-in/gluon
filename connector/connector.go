@@ -12,6 +12,7 @@ import (
 var ErrOperationNotAllowed = errors.New("operation not allowed")
 var ErrMessageSizeExceedsLimits = errors.New("message size exceeds limits")
 var ErrOverQuota = errors.New("quota exceeded")
+var ErrSpecialUseNotSupported = errors.New("special use not supported")
 
 // Connector connects the gluon server to a remote mail store.
 type Connector interface {
@@ -23,6 +24,11 @@ type Connector interface {
 
 	// CreateMailbox creates a mailbox with the given name.
 	CreateMailbox(ctx context.Context, cache IMAPStateWrite, name []string) (imap.Mailbox, error)
+
+	// CreateSpecialUseMailbox creates a mailbox with the given name and special-use attributes, such as imap.AttrSent.
+	// The returned mailbox carries the attributes it was given. A connector that cannot give a mailbox one of the
+	// attributes returns ErrSpecialUseNotSupported and creates nothing.
+	CreateSpecialUseMailbox(ctx context.Context, cache IMAPStateWrite, name []string, attributes imap.FlagSet) (imap.Mailbox, error)
 
 	// GetMessageLiteral is intended to be used by Gluon when, for some reason, the local cached data no longer exists.
 	// Note: this can get called from different go routines.

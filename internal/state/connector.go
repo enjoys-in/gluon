@@ -28,6 +28,9 @@ type Connector interface {
 	// CreateMailbox creates a new mailbox with the given name.
 	CreateMailbox(ctx context.Context, tx db.Transaction, name []string) ([]Update, imap.Mailbox, error)
 
+	// CreateSpecialUseMailbox creates a new mailbox with the given name and special-use attributes.
+	CreateSpecialUseMailbox(ctx context.Context, tx db.Transaction, name []string, attributes imap.FlagSet) ([]Update, imap.Mailbox, error)
+
 	// UpdateMailbox sets the name of the mailbox with the given ID to the given new name.
 	UpdateMailbox(ctx context.Context, tx db.Transaction, mboxID imap.MailboxID, newName []string) ([]Update, error)
 

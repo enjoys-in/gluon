@@ -103,7 +103,7 @@ func TestLiteralPlusRejectedCommandSkipsEveryLiteral(t *testing.T) {
 func TestLiteralPlusErrorAfterLiteralKeepsSessionInSync(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t), func(c *testConnection, _ *testSession) {
 		c.C("A001 CREATE {4+}\r\nWork unexpected")
-		c.Sx(`^A001 BAD .*expected CR`)
+		c.Sx(`^A001 BAD .*expected \( for create parameters start`)
 
 		c.C("A002 SELECT {5+}\r\nINBOX")
 		c.OK(`A002`)

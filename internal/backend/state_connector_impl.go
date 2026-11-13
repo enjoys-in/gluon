@@ -58,6 +58,19 @@ func (sc *stateConnectorImpl) CreateMailbox(ctx context.Context, tx db.Transacti
 	return cache.stateUpdates, mbox, nil
 }
 
+func (sc *stateConnectorImpl) CreateSpecialUseMailbox(ctx context.Context, tx db.Transaction, name []string, attributes imap.FlagSet) ([]state.Update, imap.Mailbox, error) {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	cache := sc.newDBIMAPWrite(tx)
+
+	mbox, err := sc.connector.CreateSpecialUseMailbox(ctx, &cache, name, attributes)
+	if err != nil {
+		return nil, imap.Mailbox{}, err
+	}
+
+	return cache.stateUpdates, mbox, nil
+}
+
 func (sc *stateConnectorImpl) UpdateMailbox(ctx context.Context, tx db.Transaction, mboxID imap.MailboxID, newName []string) ([]state.Update, error) {
 	ctx = sc.newContextWithMetadata(ctx)
 

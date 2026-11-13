@@ -250,6 +250,11 @@ func (state *State) Examine(ctx context.Context, name string, fn func(*Mailbox) 
 }
 
 func (state *State) Create(ctx context.Context, name string) error {
+	return state.CreateSpecialUse(ctx, name, nil)
+}
+
+// CreateSpecialUse creates the mailbox with the given special-use attributes. Mailboxes created above it get none.
+func (state *State) CreateSpecialUse(ctx context.Context, name string, attributes imap.FlagSet) error {
 	uidValidity, err := state.user.GenerateUIDValidity()
 	if err != nil {
 		return err
@@ -308,7 +313,17 @@ func (state *State) Create(ctx context.Context, name string) error {
 		var allUpdates []Update
 
 		for _, mboxName := range mboxesToCreate {
-			updates, err := state.actionCreateMailbox(ctx, tx, mboxName, uidValidity)
+			var (
+				updates []Update
+				err     error
+			)
+
+			if mboxName == name && attributes.Len() > 0 {
+				updates, err = state.actionCreateSpecialUseMailbox(ctx, tx, mboxName, attributes, uidValidity)
+			} else {
+				updates, err = state.actionCreateMailbox(ctx, tx, mboxName, uidValidity)
+			}
+
 			if err != nil {
 				return nil, err
 			}
