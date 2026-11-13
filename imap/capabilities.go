@@ -15,13 +15,20 @@ const (
 	SORT             Capability = `SORT`
 	ThreadReferences Capability = `THREAD=REFERENCES`
 	NAMESPACE        Capability = `NAMESPACE`
+	CHILDREN         Capability = `CHILDREN`
+	SpecialUse       Capability = `SPECIAL-USE`
+	ListExtended     Capability = `LIST-EXTENDED`
+	ListStatus       Capability = `LIST-STATUS`
+	ESEARCH          Capability = `ESEARCH`
+	LiteralPlus      Capability = `LITERAL+`
 )
 
 func IsCapabilityAvailableBeforeAuth(c Capability) bool {
 	switch c {
-	case IMAP4rev1, StartTLS, IDLE, ID, AUTHPLAIN:
+	case IMAP4rev1, StartTLS, IDLE, ID, AUTHPLAIN, LiteralPlus:
 		return true
-	case UNSELECT, UIDPLUS, MOVE, QUOTA, SORT, ThreadReferences, NAMESPACE:
+	case UNSELECT, UIDPLUS, MOVE, QUOTA, SORT, ThreadReferences, NAMESPACE,
+		CHILDREN, SpecialUse, ListExtended, ListStatus, ESEARCH:
 		return false
 	}
 

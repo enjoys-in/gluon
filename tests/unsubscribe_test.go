@@ -55,13 +55,13 @@ func TestUnsubscribeAfterMailboxRenamedDeleted(t *testing.T) {
 func TestUnsubscribeList(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t, withDelimiter(".")), func(c *testConnection, _ *testSession) {
 		c.C(`tag list "" "*"`)
-		c.S(`* LIST (\Unmarked) "." "INBOX"`)
+		c.S(`* LIST (\HasNoChildren \Unmarked) "." "INBOX"`)
 		c.OK(`tag`)
 
 		c.C(`tag unsubscribe "INBOX"`).OK(`tag`)
 
 		c.C(`tag list "" "*"`)
-		c.S(`* LIST (\Unmarked) "." "INBOX"`)
+		c.S(`* LIST (\HasNoChildren \Unmarked) "." "INBOX"`)
 		c.OK(`tag`)
 
 		c.C(`tag lsub "" "*"`)
@@ -74,7 +74,7 @@ func TestUnsubscribeList(t *testing.T) {
 		c.OK(`tag`)
 
 		c.C(`tag list "" "*"`)
-		c.S(`* LIST (\Unmarked) "." "INBOX"`)
+		c.S(`* LIST (\HasNoChildren \Unmarked) "." "INBOX"`)
 		c.OK(`tag`)
 	})
 }

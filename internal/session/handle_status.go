@@ -19,6 +19,26 @@ func (s *Session) handleStatus(ctx context.Context, tag string, cmd *command.Sta
 		return err
 	}
 
+	items, err := s.statusItems(ctx, nameUTF8, cmd.Attributes, ch)
+	if err != nil {
+		return err
+	}
+
+	ch <- response.Status().WithMailbox(cmd.Mailbox).WithItems(items...)
+
+	ch <- response.Ok(tag).WithMessage("STATUS")
+
+	return nil
+}
+
+func (s *Session) statusItems(
+	ctx context.Context,
+	nameUTF8 string,
+	attributes []command.StatusAttribute,
+	ch chan response.Response,
+) ([]response.Item, error) {
+	var items []response.Item
+
 	if err := s.state.Mailbox(ctx, nameUTF8, func(mailbox *state.Mailbox) error {
 		if mailbox.Selected() {
 			if err := flush(ctx, mailbox, true, ch); err != nil {
@@ -26,9 +46,7 @@ func (s *Session) handleStatus(ctx context.Context, tag string, cmd *command.Sta
 			}
 		}
 
-		var items []response.Item
-
-		for _, att := range cmd.Attributes {
+		for _, att := range attributes {
 			switch att {
 			case command.StatusAttributeMessages:
 				items = append(items, response.ItemMessages(mailbox.Count()))
@@ -52,14 +70,10 @@ func (s *Session) handleStatus(ctx context.Context, tag string, cmd *command.Sta
 			}
 		}
 
-		ch <- response.Status().WithMailbox(cmd.Mailbox).WithItems(items...)
-
 		return nil
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
-	ch <- response.Ok(tag).WithMessage("STATUS")
-
-	return nil
+	return items, nil
 }

@@ -67,6 +67,19 @@ func (StatusCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
 		return nil, err
 	}
 
+	attributes, err := parseStatusAttributes(p)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Status{
+		Mailbox:    mailbox.Value,
+		Attributes: attributes,
+	}, nil
+}
+
+func parseStatusAttributes(p *rfcparser.Parser) ([]StatusAttribute, error) {
+	// "(" status-att *(SP status-att) ")"
 	if err := p.Consume(rfcparser.TokenTypeLParen, "expected ( for status attributes start"); err != nil {
 		return nil, err
 	}
@@ -103,10 +116,7 @@ func (StatusCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
 		return nil, err
 	}
 
-	return &Status{
-		Mailbox:    mailbox.Value,
-		Attributes: attributes,
-	}, nil
+	return attributes, nil
 }
 
 func parseStatusAttribute(p *rfcparser.Parser) (StatusAttribute, error) {

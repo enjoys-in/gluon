@@ -18,10 +18,10 @@ func TestDelete(t *testing.T) {
 		checkMailboxesMatchNamesAndAttributes(
 			t, client, "", "*",
 			map[string][]string{
-				"INBOX":       {goimap.UnmarkedAttr},
-				"blurdybloop": {goimap.UnmarkedAttr},
-				"foo":         {goimap.UnmarkedAttr},
-				"foo.bar":     {goimap.UnmarkedAttr},
+				"INBOX":       {goimap.HasNoChildrenAttr, goimap.UnmarkedAttr},
+				"blurdybloop": {goimap.HasNoChildrenAttr, goimap.UnmarkedAttr},
+				"foo":         {goimap.HasChildrenAttr, goimap.UnmarkedAttr},
+				"foo.bar":     {goimap.HasNoChildrenAttr, goimap.UnmarkedAttr},
 			},
 		)
 
@@ -31,17 +31,17 @@ func TestDelete(t *testing.T) {
 		checkMailboxesMatchNamesAndAttributes(
 			t, client, "", "*",
 			map[string][]string{
-				"INBOX":   {goimap.UnmarkedAttr},
-				"foo":     {goimap.NoSelectAttr},
-				"foo.bar": {goimap.UnmarkedAttr},
+				"INBOX":   {goimap.HasNoChildrenAttr, goimap.UnmarkedAttr},
+				"foo":     {goimap.HasChildrenAttr, goimap.NoSelectAttr},
+				"foo.bar": {goimap.HasNoChildrenAttr, goimap.UnmarkedAttr},
 			},
 		)
 
 		checkMailboxesMatchNamesAndAttributes(
 			t, client, "", "%",
 			map[string][]string{
-				"INBOX": {goimap.UnmarkedAttr},
-				"foo":   {goimap.NoSelectAttr},
+				"INBOX": {goimap.HasNoChildrenAttr, goimap.UnmarkedAttr},
+				"foo":   {goimap.HasChildrenAttr, goimap.NoSelectAttr},
 			},
 		)
 
@@ -62,10 +62,10 @@ func TestDeleteMailboxHasChildren(t *testing.T) {
 		c.C(`A004 SELECT "INBOX"`).OK(`A004`)
 		c.C(`A005 LIST "" *`)
 		c.S(
-			`* LIST (\Unmarked) "/" "INBOX"`,
-			`* LIST (\Unmarked) "/" "blurdybloop"`,
-			`* LIST (\Marked) "/" "foo"`,
-			`* LIST (\Marked) "/" "foo/bar"`,
+			`* LIST (\HasNoChildren \Unmarked) "/" "INBOX"`,
+			`* LIST (\HasNoChildren \Unmarked) "/" "blurdybloop"`,
+			`* LIST (\HasChildren \Marked) "/" "foo"`,
+			`* LIST (\HasNoChildren \Marked) "/" "foo/bar"`,
 		)
 		c.OK(`A005`)
 
@@ -81,10 +81,10 @@ func TestDeleteMailboxHasChildren(t *testing.T) {
 
 		c.C(`A009 LIST "" *`)
 		c.S(
-			`* LIST (\Unmarked) "/" "INBOX"`,
-			`* LIST (\Unmarked) "/" "blurdybloop"`,
-			`* LIST (\Noselect) "/" "foo"`,
-			`* LIST (\Marked) "/" "foo/bar"`,
+			`* LIST (\HasNoChildren \Unmarked) "/" "INBOX"`,
+			`* LIST (\HasNoChildren \Unmarked) "/" "blurdybloop"`,
+			`* LIST (\HasChildren \Noselect) "/" "foo"`,
+			`* LIST (\HasNoChildren \Marked) "/" "foo/bar"`,
 		)
 		c.OK(`A009`)
 	})

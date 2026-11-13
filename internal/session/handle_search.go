@@ -40,7 +40,7 @@ func (s *Session) handleSearch(ctx context.Context, tag string, cmd *command.Sea
 	}
 
 	select {
-	case ch <- response.Search(seq...):
+	case ch <- newSearchResponse(ctx, tag, cmd, seq):
 
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -55,4 +55,28 @@ func (s *Session) handleSearch(ctx context.Context, tag string, cmd *command.Sea
 	return response.Ok(tag).
 		WithItems(items...).
 		WithMessage(okMessage(ctx)), nil
+}
+
+func newSearchResponse(ctx context.Context, tag string, cmd *command.Search, seq []uint32) response.Response {
+	if len(cmd.Return) == 0 {
+		return response.Search(seq...)
+	}
+
+	// RFC4731 ESEARCH Extension
+	res := response.ESearch(tag, contexts.IsUID(ctx), seq...)
+
+	for _, opt := range cmd.Return {
+		switch opt {
+		case command.SearchReturnMin:
+			res.WithMin()
+		case command.SearchReturnMax:
+			res.WithMax()
+		case command.SearchReturnAll:
+			res.WithAll()
+		case command.SearchReturnCount:
+			res.WithCount()
+		}
+	}
+
+	return res
 }

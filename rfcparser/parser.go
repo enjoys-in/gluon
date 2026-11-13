@@ -8,6 +8,8 @@ import (
 
 const DefaultContinuationMessage = "Ready"
 
+const MaxLiteralSize = 70 * 1024 * 1024
+
 // Parser provide facilities to consumes tokens from a given scanner. Advance should be called at least once before
 // any checks in order to initialize the previousToken.
 type Parser struct {
@@ -177,7 +179,7 @@ func (p *Parser) ParseQuoted() (String, error) {
 // ParseLiteral parses a literal as defined in RFC3501.
 func (p *Parser) ParseLiteral() ([]byte, error) {
 	/*
-		literal         = "{" number "}" CRLF *CHAR8
+		literal         = "{" number ["+"] "}" CRLF *CHAR8
 	*/
 	if err := p.Consume(TokenTypeLCurly, "expected '{' for literal start"); err != nil {
 		return nil, err
@@ -188,11 +190,16 @@ func (p *Parser) ParseLiteral() ([]byte, error) {
 		return nil, err
 	}
 
+	nonSynchronizing, err := p.Matches(TokenTypePlus)
+	if err != nil {
+		return nil, err
+	}
+
 	if literalSize <= 0 {
 		return nil, fmt.Errorf("invalid literal size")
 	}
 
-	if literalSize >= 70*1024*1024 {
+	if literalSize >= MaxLiteralSize {
 		return nil, fmt.Errorf("literal size exceeds maximum size of 70MB")
 	}
 
@@ -207,7 +214,7 @@ func (p *Parser) ParseLiteral() ([]byte, error) {
 	// Call literal continuation callback here or we risk getting stuck forever trying to read the next token
 	// in the scanner due to the byte buffers implementation as there will be no more new input until the we signal
 	// for more input.
-	if p.Check(TokenTypeLF) && p.literalContinuationCb != nil {
+	if !nonSynchronizing && p.Check(TokenTypeLF) && p.literalContinuationCb != nil {
 		if err := p.literalContinuationCb(DefaultContinuationMessage); err != nil {
 			return nil, fmt.Errorf("error occurred during literal continuation callback:%w", err)
 		}

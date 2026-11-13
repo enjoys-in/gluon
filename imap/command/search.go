@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -13,9 +14,19 @@ import (
 
 const maxSearchKeyDepth = 64
 
+type SearchReturnOption int
+
+const (
+	SearchReturnMin SearchReturnOption = iota
+	SearchReturnMax
+	SearchReturnAll
+	SearchReturnCount
+)
+
 type Search struct {
 	Charset string
 	Keys    []SearchKey
+	Return  []SearchReturnOption
 }
 
 type SearchKey interface {
@@ -107,6 +118,10 @@ func (scp *SearchCommandParser) FromParser(p *rfcparser.Parser) (Payload, error)
 				Offset: firstChar.Offset,
 			}
 
+			if keywordStr.Value == "return" {
+				return scp.fromParserWithReturnOptions(p)
+			}
+
 			key, err := handleSearchKey(keywordStr, p, 0)
 			if err != nil {
 				return nil, err
@@ -146,6 +161,87 @@ func (scp *SearchCommandParser) FromParser(p *rfcparser.Parser) (Payload, error)
 		Charset: charset,
 		Keys:    keys,
 	}, nil
+}
+
+func (scp *SearchCommandParser) fromParserWithReturnOptions(p *rfcparser.Parser) (Payload, error) {
+	//search          = "SEARCH" [SP "RETURN" SP "(" [search-return-opt *(SP search-return-opt)] ")"] SP search-program
+	offset := p.PreviousToken().Offset
+
+	opts, err := parseSearchReturnOptions(p)
+	if err != nil {
+		return nil, err
+	}
+
+	payload, err := scp.FromParser(p)
+	if err != nil {
+		return nil, err
+	}
+
+	search, ok := payload.(*Search)
+	if !ok || search.Return != nil {
+		return nil, p.MakeErrorAtOffset("unexpected RETURN in search program", offset)
+	}
+
+	search.Return = opts
+
+	return search, nil
+}
+
+func parseSearchReturnOptions(p *rfcparser.Parser) ([]SearchReturnOption, error) {
+	if err := p.Consume(rfcparser.TokenTypeSP, "expected space after RETURN"); err != nil {
+		return nil, err
+	}
+
+	if err := p.Consume(rfcparser.TokenTypeLParen, "expected ( for return options start"); err != nil {
+		return nil, err
+	}
+
+	var opts []SearchReturnOption
+
+	for first := true; !p.Check(rfcparser.TokenTypeRParen); first = false {
+		if !first {
+			if err := p.Consume(rfcparser.TokenTypeSP, "expected space between return options"); err != nil {
+				return nil, err
+			}
+		}
+
+		offset := p.CurrentToken().Offset
+
+		name, err := p.ParseAtom()
+		if err != nil {
+			return nil, err
+		}
+
+		var opt SearchReturnOption
+
+		switch strings.ToUpper(name) {
+		case "MIN":
+			opt = SearchReturnMin
+		case "MAX":
+			opt = SearchReturnMax
+		case "ALL":
+			opt = SearchReturnAll
+		case "COUNT":
+			opt = SearchReturnCount
+		default:
+			return nil, p.MakeErrorAtOffset(fmt.Sprintf("unknown search return option '%v'", name), offset)
+		}
+
+		if !slices.Contains(opts, opt) {
+			opts = append(opts, opt)
+		}
+	}
+
+	if err := p.Consume(rfcparser.TokenTypeRParen, "expected ) for return options end"); err != nil {
+		return nil, err
+	}
+
+	// RFC 4731: an empty list means ALL.
+	if len(opts) == 0 {
+		opts = []SearchReturnOption{SearchReturnAll}
+	}
+
+	return opts, nil
 }
 
 func parseSearchKey(p *rfcparser.Parser, depth int) (SearchKey, error) {

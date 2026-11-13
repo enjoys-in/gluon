@@ -91,7 +91,7 @@ func TestNamespaceRejectsArguments(t *testing.T) {
 func TestNamespaceNotAdvertisedBeforeLogin(t *testing.T) {
 	runOneToOneTest(t, defaultServerOptions(t), func(c *testConnection, _ *testSession) {
 		c.C("A001 CAPABILITY")
-		c.S(`* CAPABILITY AUTH=PLAIN ID IDLE IMAP4rev1 STARTTLS`)
+		c.S(`* CAPABILITY AUTH=PLAIN ID IDLE IMAP4rev1 LITERAL+ STARTTLS`)
 		c.OK("A001")
 
 		c.C("A002 login user pass")

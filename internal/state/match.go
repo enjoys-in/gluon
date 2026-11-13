@@ -15,6 +15,7 @@ type Match struct {
 	Name      string
 	Delimiter string
 	Atts      imap.FlagSet
+	ChildInfo []string
 }
 
 type matchMailbox struct {

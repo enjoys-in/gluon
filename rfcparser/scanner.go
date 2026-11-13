@@ -108,6 +108,12 @@ func (s *Scanner) ConsumeUntilNewLine() ([]byte, error) {
 	return s.source.ReadBytes('\n')
 }
 
+func (s *Scanner) Discard(n int) error {
+	_, err := io.CopyN(io.Discard, s.source, int64(n))
+
+	return err
+}
+
 func (s *Scanner) ScanToken() (Token, error) {
 	b, err := s.advance()
 	if err != nil {

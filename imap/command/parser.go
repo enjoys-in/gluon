@@ -2,6 +2,8 @@ package command
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/ProtonMail/gluon/rfcparser"
@@ -114,11 +116,37 @@ func (p *Parser) LastParsedCommand() string {
 	return p.lastCmd
 }
 
+var nonSynchronizingLiteralSuffix = regexp.MustCompile(`\{(\d+)\+\}\r\n$`)
+
 // ConsumeInvalidInput will consume all remaining scanner input until a new line has been reached.
 func (p *Parser) ConsumeInvalidInput() error {
-	_, err := p.scanner.ConsumeUntilNewLine()
+	rest, err := p.scanner.ConsumeUntilNewLine()
+	if err != nil {
+		return err
+	}
 
-	return err
+	line := append([]byte{p.parser.CurrentToken().Value}, rest...)
+
+	// The data of a non-synchronizing literal (RFC 7888) is already on the wire and has to be discarded too.
+	for {
+		match := nonSynchronizingLiteralSuffix.FindSubmatch(line)
+		if match == nil {
+			return nil
+		}
+
+		size, err := strconv.Atoi(string(match[1]))
+		if err != nil || size >= rfcparser.MaxLiteralSize {
+			return fmt.Errorf("literal size exceeds maximum size of 70MB")
+		}
+
+		if err := p.scanner.Discard(size); err != nil {
+			return err
+		}
+
+		if line, err = p.scanner.ConsumeUntilNewLine(); err != nil {
+			return err
+		}
+	}
 }
 
 func (p *Parser) Parse() (Command, error) {
