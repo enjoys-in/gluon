@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ProtonMail/gluon/imap"
+	"github.com/ProtonMail/gluon/imap/command"
 )
 
 var ErrOperationNotAllowed = errors.New("operation not allowed")
@@ -64,6 +65,10 @@ type Connector interface {
 	// GetQuotaRoot returns the list of quota root names applicable to the given mailbox,
 	// along with the resource usage for each of those roots.
 	GetQuotaRoot(ctx context.Context, mailboxName string) ([]string, []*imap.QuotaRoot, error)
+
+	// SearchMessages lets the connector answer a search from its own index. It returns the messages in the mailbox
+	// that match every key. Returning false makes Gluon search its own copy of the mailbox instead.
+	SearchMessages(ctx context.Context, mboxID imap.MailboxID, keys []command.SearchKey) ([]imap.MessageID, bool, error)
 
 	// GetUpdates returns a stream of updates that the gluon server should apply.
 	GetUpdates() <-chan imap.Update

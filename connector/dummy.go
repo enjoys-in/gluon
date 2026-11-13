@@ -65,6 +65,9 @@ type Dummy struct {
 
 	// mailboxQuotaRoots maps mailbox names to their applicable quota root names.
 	mailboxQuotaRoots map[string][]string
+
+	// searchEnabled makes the connector answer searches itself instead of leaving them to Gluon.
+	searchEnabled bool
 }
 
 func NewDummy(usernames []string, password []byte, period time.Duration, flags, permFlags, attrs imap.FlagSet) *Dummy {

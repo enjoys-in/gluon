@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"strings"
 
 	"github.com/ProtonMail/gluon/imap/command"
 	"github.com/ProtonMail/gluon/internal/contexts"
@@ -34,7 +35,7 @@ func (s *Session) handleSearch(ctx context.Context, tag string, cmd *command.Sea
 		decoder = encoding.Nop.NewDecoder()
 	}
 
-	seq, err := mailbox.Search(ctx, cmd.Keys, decoder)
+	seq, err := search(ctx, cmd, mailbox, decoder)
 	if err != nil {
 		return nil, err
 	}
@@ -55,6 +56,17 @@ func (s *Session) handleSearch(ctx context.Context, tag string, cmd *command.Sea
 	return response.Ok(tag).
 		WithItems(items...).
 		WithMessage(okMessage(ctx)), nil
+}
+
+func search(ctx context.Context, cmd *command.Search, mailbox *state.Mailbox, decoder *encoding.Decoder) ([]uint32, error) {
+	// The connector is only given search strings it can read as UTF-8.
+	if cmd.Charset == "" || strings.EqualFold(cmd.Charset, "UTF-8") || strings.EqualFold(cmd.Charset, "US-ASCII") {
+		if seq, ok, err := mailbox.SearchWithConnector(ctx, cmd.Keys, decoder); err != nil || ok {
+			return seq, err
+		}
+	}
+
+	return mailbox.Search(ctx, cmd.Keys, decoder)
 }
 
 func newSearchResponse(ctx context.Context, tag string, cmd *command.Search, seq []uint32) response.Response {

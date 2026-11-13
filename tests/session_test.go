@@ -56,6 +56,7 @@ type Connector interface {
 
 	SetQuota(rootName string, resources ...imap.QuotaResource)
 	SetMailboxQuotaRoot(mailboxName string, rootNames ...string)
+	SetSearchEnabled(value bool)
 }
 
 type testSession struct {

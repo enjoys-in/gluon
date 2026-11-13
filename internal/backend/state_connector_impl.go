@@ -7,6 +7,7 @@ import (
 	"github.com/ProtonMail/gluon/connector"
 	"github.com/ProtonMail/gluon/db"
 	"github.com/ProtonMail/gluon/imap"
+	"github.com/ProtonMail/gluon/imap/command"
 	"github.com/ProtonMail/gluon/internal/state"
 )
 
@@ -238,4 +239,10 @@ func (sc *stateConnectorImpl) GetQuotaRoot(ctx context.Context, mailboxName stri
 	ctx = sc.newContextWithMetadata(ctx)
 
 	return sc.connector.GetQuotaRoot(ctx, mailboxName)
+}
+
+func (sc *stateConnectorImpl) SearchMessages(ctx context.Context, mboxID imap.MailboxID, keys []command.SearchKey) ([]imap.MessageID, bool, error) {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	return sc.connector.SearchMessages(ctx, mboxID, keys)
 }

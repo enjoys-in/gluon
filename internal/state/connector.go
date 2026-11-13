@@ -6,6 +6,7 @@ import (
 
 	"github.com/ProtonMail/gluon/db"
 	"github.com/ProtonMail/gluon/imap"
+	"github.com/ProtonMail/gluon/imap/command"
 )
 
 // Connector interface for State differs slightly from the connector.Connector interface as it needs the ability
@@ -90,4 +91,8 @@ type Connector interface {
 	// GetQuotaRoot returns the list of quota root names applicable to the given mailbox,
 	// along with the resource usage for each of those roots.
 	GetQuotaRoot(ctx context.Context, mailboxName string) ([]string, []*imap.QuotaRoot, error)
+
+	// SearchMessages returns the messages in the mailbox that match every key, or false when the connector
+	// leaves the search to Gluon.
+	SearchMessages(ctx context.Context, mboxID imap.MailboxID, keys []command.SearchKey) ([]imap.MessageID, bool, error)
 }
