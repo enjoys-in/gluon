@@ -26,6 +26,7 @@ const (
 	StatusSize       Capability = `STATUS=SIZE`
 	WITHIN           Capability = `WITHIN`
 	ESORT            Capability = `ESORT`
+	SortDisplay      Capability = `SORT=DISPLAY`
 )
 
 func IsCapabilityAvailableBeforeAuth(c Capability) bool {
@@ -33,7 +34,7 @@ func IsCapabilityAvailableBeforeAuth(c Capability) bool {
 	case IMAP4rev1, StartTLS, IDLE, ID, AUTHPLAIN, LiteralPlus, SASLIR:
 		return true
 	case UNSELECT, UIDPLUS, MOVE, QUOTA, SORT, ThreadReferences, NAMESPACE,
-		CHILDREN, SpecialUse, ListExtended, ListStatus, ESEARCH, UNAUTHENTICATE, StatusSize, WITHIN, ESORT:
+		CHILDREN, SpecialUse, ListExtended, ListStatus, ESEARCH, UNAUTHENTICATE, StatusSize, WITHIN, ESORT, SortDisplay:
 		return false
 	}
 

@@ -112,7 +112,7 @@ func (m *Mailbox) Sort(ctx context.Context, sortKeys []command.SortKey, searchKe
 
 	for _, sk := range sortKeys {
 		switch sk.Field {
-		case "DATE", "FROM", "TO", "CC", "SUBJECT":
+		case "DATE", "FROM", "TO", "CC", "SUBJECT", "DISPLAYFROM", "DISPLAYTO":
 			needsHeader = true
 		case "SIZE":
 			needsSize = true
@@ -186,6 +186,12 @@ func (m *Mailbox) Sort(ctx context.Context, sortKeys []command.SortKey, searchKe
 
 				case "SUBJECT":
 					entry.fields["SUBJECT"] = extractBaseSubject(header.Get("Subject"))
+
+				case "DISPLAYFROM":
+					entry.fields["DISPLAYFROM"] = extractSortDisplayName(header.Get("From"))
+
+				case "DISPLAYTO":
+					entry.fields["DISPLAYTO"] = extractSortDisplayName(header.Get("To"))
 				}
 			}
 

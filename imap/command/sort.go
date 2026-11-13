@@ -11,7 +11,7 @@ import (
 // SortKey represents a single sort criterion per RFC 5256.
 type SortKey struct {
 	Reverse bool
-	Field   string // "ARRIVAL", "CC", "DATE", "FROM", "SIZE", "SUBJECT", "TO"
+	Field   string // "ARRIVAL", "CC", "DATE", "FROM", "SIZE", "SUBJECT", "TO", "DISPLAYFROM", "DISPLAYTO"
 }
 
 func (s SortKey) String() string {
@@ -51,6 +51,7 @@ func (SortCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
 	// sort-criteria = "(" sort-criterion *(SP sort-criterion) ")"
 	// sort-criterion = ["REVERSE" SP] sort-key
 	// sort-key = "ARRIVAL" / "CC" / "DATE" / "FROM" / "SIZE" / "SUBJECT" / "TO"
+	// sort-key =/ "DISPLAYFROM" / "DISPLAYTO" (RFC 5957)
 
 	if err := p.Consume(rfcparser.TokenTypeSP, "expected space after SORT"); err != nil {
 		return nil, err
@@ -195,7 +196,7 @@ func parseSortCriterion(p *rfcparser.Parser) (SortKey, error) {
 	field := strings.ToUpper(keyword.Value)
 
 	switch field {
-	case "ARRIVAL", "CC", "DATE", "FROM", "SIZE", "SUBJECT", "TO":
+	case "ARRIVAL", "CC", "DATE", "FROM", "SIZE", "SUBJECT", "TO", "DISPLAYFROM", "DISPLAYTO":
 		// Valid sort key.
 	default:
 		return SortKey{}, p.MakeErrorAtOffset(fmt.Sprintf("unknown sort key '%v'", field), keyword.Offset)
