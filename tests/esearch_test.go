@@ -161,8 +161,8 @@ func TestESearchInvalid(t *testing.T) {
 		c.C(`A002 SEARCH RETURN (BOGUS) ALL`)
 		c.Sx(`^A002 BAD .*unknown search return option 'BOGUS'`)
 
-		c.C(`A003 SEARCH RETURN (SAVE) ALL`)
-		c.Sx(`^A003 BAD .*unknown search return option 'SAVE'`)
+		c.C(`A003 SEARCH RETURN (PARTIAL 1:2) ALL`)
+		c.Sx(`^A003 BAD .*unknown search return option 'PARTIAL'`)
 
 		c.C(`A004 SEARCH RETURN MIN ALL`)
 		c.Sx(`^A004 BAD`)

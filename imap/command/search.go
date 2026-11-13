@@ -21,6 +21,7 @@ const (
 	SearchReturnMax
 	SearchReturnAll
 	SearchReturnCount
+	SearchReturnSave
 )
 
 type Search struct {
@@ -223,6 +224,8 @@ func parseSearchReturnOptions(p *rfcparser.Parser) ([]SearchReturnOption, error)
 			opt = SearchReturnAll
 		case "COUNT":
 			opt = SearchReturnCount
+		case "SAVE":
+			opt = SearchReturnSave
 		default:
 			return nil, p.MakeErrorAtOffset(fmt.Sprintf("unknown search return option '%v'", name), offset)
 		}
@@ -261,7 +264,7 @@ func parseSearchKey(p *rfcparser.Parser, depth int) (SearchKey, error) {
 		return parseSearchKeyList(p, depth)
 	}
 
-	if p.Check(rfcparser.TokenTypeDigit) || p.Check(rfcparser.TokenTypeAsterisk) {
+	if p.Check(rfcparser.TokenTypeDigit) || p.Check(rfcparser.TokenTypeAsterisk) || p.Check(rfcparser.TokenTypeDollar) {
 		seqSet, err := ParseSeqSet(p)
 		if err != nil {
 			return nil, err

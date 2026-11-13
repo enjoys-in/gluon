@@ -85,7 +85,6 @@ func TestParser_SearchRecentIsNotReturn(t *testing.T) {
 func TestParser_SearchReturnInvalid(t *testing.T) {
 	for name, line := range map[string]string{
 		"unknown option":               `tag SEARCH RETURN (BOGUS) ALL`,
-		"save is not supported":        `tag SEARCH RETURN (SAVE) ALL`,
 		"options without parentheses":  `tag SEARCH RETURN MIN ALL`,
 		"unterminated options":         `tag SEARCH RETURN (MIN ALL`,
 		"no search keys":               `tag SEARCH RETURN (MIN)`,

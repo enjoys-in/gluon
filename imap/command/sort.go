@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/ProtonMail/gluon/rfcparser"
@@ -134,6 +135,10 @@ func parseSortReturnOptions(p *rfcparser.Parser) ([]SearchReturnOption, error) {
 	opts, err := parseSearchReturnOptions(p)
 	if err != nil {
 		return nil, err
+	}
+
+	if slices.Contains(opts, SearchReturnSave) {
+		return nil, p.MakeErrorAtOffset("SORT cannot save its result", keyword.Offset)
 	}
 
 	return opts, p.Consume(rfcparser.TokenTypeSP, "expected space after return options")
