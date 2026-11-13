@@ -89,7 +89,7 @@ func (SortCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
 			break
 		}
 
-		key, err := parseSearchKey(p)
+		key, err := parseSearchKey(p, 0)
 		if err != nil {
 			return nil, err
 		}
