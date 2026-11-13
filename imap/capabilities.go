@@ -23,6 +23,7 @@ const (
 	LiteralPlus      Capability = `LITERAL+`
 	SASLIR           Capability = `SASL-IR`
 	UNAUTHENTICATE   Capability = `UNAUTHENTICATE`
+	StatusSize       Capability = `STATUS=SIZE`
 )
 
 func IsCapabilityAvailableBeforeAuth(c Capability) bool {
@@ -30,7 +31,7 @@ func IsCapabilityAvailableBeforeAuth(c Capability) bool {
 	case IMAP4rev1, StartTLS, IDLE, ID, AUTHPLAIN, LiteralPlus, SASLIR:
 		return true
 	case UNSELECT, UIDPLUS, MOVE, QUOTA, SORT, ThreadReferences, NAMESPACE,
-		CHILDREN, SpecialUse, ListExtended, ListStatus, ESEARCH, UNAUTHENTICATE:
+		CHILDREN, SpecialUse, ListExtended, ListStatus, ESEARCH, UNAUTHENTICATE, StatusSize:
 		return false
 	}
 

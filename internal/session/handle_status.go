@@ -49,7 +49,7 @@ func (s *Session) statusItems(
 				}
 			}
 
-			status, err = mailbox.Status(ctx)
+			status, err = mailbox.Status(ctx, attributes)
 
 			return err
 		}); err != nil {
@@ -75,6 +75,9 @@ func (s *Session) statusItems(
 
 		case command.StatusAttributeUnseen:
 			items = append(items, response.ItemUnseen(uint32(status.Unseen)))
+
+		case command.StatusAttributeSize:
+			items = append(items, response.ItemSize(status.Size))
 		}
 	}
 

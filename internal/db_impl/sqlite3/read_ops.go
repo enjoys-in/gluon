@@ -194,6 +194,18 @@ func (r readOps) GetMailboxUnseenCount(ctx context.Context, mboxID imap.Internal
 	return utils.MapQueryRow[int](ctx, r.qw, query, utils.MapSliceToAny(spellings)...)
 }
 
+func (r readOps) GetMailboxSize(ctx context.Context, mboxID imap.InternalMailboxID) (int, error) {
+	query := fmt.Sprintf("SELECT COALESCE(SUM(`s`.`%[1]v`), 0) FROM %[2]v AS m JOIN `%[3]v` AS s ON `s`.`%[4]v` = `m`.`%[5]v`",
+		v1.MessagesFieldSize,
+		v1.MailboxMessageTableName(mboxID),
+		v1.MessagesTableName,
+		v1.MessagesFieldID,
+		v1.MailboxMessagesFieldMessageID,
+	)
+
+	return utils.MapQueryRow[int](ctx, r.qw, query)
+}
+
 // getFlagSpellings returns how a flag is spelled in the stored message flags, which are compared ignoring case.
 func (r readOps) getFlagSpellings(ctx context.Context, flag string) ([]string, error) {
 	// Every spelling sorts between the upper case and the lower case one, so only that part of the index is read.

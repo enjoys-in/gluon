@@ -43,6 +43,8 @@ type MailboxReadOps interface {
 
 	GetMailboxUnseenCount(ctx context.Context, mboxID imap.InternalMailboxID) (int, error)
 
+	GetMailboxSize(ctx context.Context, mboxID imap.InternalMailboxID) (int, error)
+
 	GetMailboxMessageCountWithRemoteID(ctx context.Context, mboxID imap.MailboxID) (int, error)
 
 	GetMailboxFlags(ctx context.Context, mboxID imap.InternalMailboxID) (imap.FlagSet, error)

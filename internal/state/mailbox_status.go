@@ -3,6 +3,7 @@ package state
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"github.com/ProtonMail/gluon/db"
 	"github.com/ProtonMail/gluon/imap"
@@ -15,6 +16,7 @@ type MailboxStatus struct {
 	Unseen      int
 	UIDNext     imap.UID
 	UIDValidity imap.UID
+	Size        int
 }
 
 // MailboxStatus counts with queries instead of loading the mailbox's messages. It returns false for the selected
@@ -51,6 +53,9 @@ func (state *State) MailboxStatus(ctx context.Context, name string, attributes [
 			case command.StatusAttributeUIDNext:
 				status.UIDNext, err = client.GetMailboxUID(ctx, mbox.ID)
 
+			case command.StatusAttributeSize:
+				status.Size, err = client.GetMailboxSize(ctx, mbox.ID)
+
 			case command.StatusAttributeUIDValidity:
 			}
 
@@ -69,17 +74,27 @@ func (state *State) MailboxStatus(ctx context.Context, name string, attributes [
 }
 
 // Status reports the mailbox as the session sees it.
-func (m *Mailbox) Status(ctx context.Context) (MailboxStatus, error) {
+func (m *Mailbox) Status(ctx context.Context, attributes []command.StatusAttribute) (MailboxStatus, error) {
 	uidNext, err := m.UIDNext(ctx)
 	if err != nil {
 		return MailboxStatus{}, err
 	}
 
-	return MailboxStatus{
+	status := MailboxStatus{
 		Messages:    m.Count(),
 		Recent:      m.GetMessagesWithFlagCount(imap.FlagRecent),
 		Unseen:      m.GetMessagesWithoutFlagCount(imap.FlagSeen),
 		UIDNext:     uidNext,
 		UIDValidity: m.UIDValidity(),
-	}, nil
+	}
+
+	if slices.Contains(attributes, command.StatusAttributeSize) {
+		if status.Size, err = stateDBReadResult(ctx, m.state, func(ctx context.Context, client db.ReadOnly) (int, error) {
+			return client.GetMailboxSize(ctx, m.snap.mboxID.InternalID)
+		}); err != nil {
+			return MailboxStatus{}, err
+		}
+	}
+
+	return status, nil
 }
