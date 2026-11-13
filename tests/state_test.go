@@ -32,6 +32,7 @@ var (
 		`LSUB "#news." "comp.mail.*"`,
 		`STATUS INBOX (messages)`,
 		`IDLE`,
+		`NAMESPACE`,
 	}
 
 	selectedCommands = []string{
