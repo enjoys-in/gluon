@@ -12,6 +12,7 @@ type Append struct {
 	Flags    []string
 	DateTime time.Time
 	Literal  []byte
+	More     []AppendMessage
 }
 
 func (l Append) String() string {
@@ -88,10 +89,17 @@ func (AppendCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
 		return nil, err
 	}
 
+	// RFC 3502 MULTIAPPEND: more messages can follow.
+	more, err := parseAppendMessages(p, len(literal))
+	if err != nil {
+		return nil, err
+	}
+
 	return &Append{
 		Mailbox:  mailbox.Value,
 		Literal:  literal,
 		Flags:    appendFlags,
 		DateTime: dateTime,
+		More:     more,
 	}, nil
 }

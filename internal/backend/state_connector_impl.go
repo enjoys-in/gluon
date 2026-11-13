@@ -2,6 +2,7 @@ package backend
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ProtonMail/gluon/connector"
@@ -125,6 +126,34 @@ func (sc *stateConnectorImpl) CreateMessage(
 	}
 
 	return cache.stateUpdates, imap.NewInternalMessageID(), msg, newLiteral, nil
+}
+
+func (sc *stateConnectorImpl) CreateMessages(
+	ctx context.Context,
+	tx db.Transaction,
+	mboxID imap.MailboxID,
+	messages []connector.MessageToCreate,
+) ([]state.Update, []imap.InternalMessageID, []imap.Message, [][]byte, error) {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	cache := sc.newDBIMAPWrite(tx)
+
+	created, literals, err := sc.connector.CreateMessages(ctx, &cache, mboxID, messages)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	if len(created) != len(messages) || len(literals) != len(messages) {
+		return nil, nil, nil, nil, fmt.Errorf("connector created %v of %v messages", len(created), len(messages))
+	}
+
+	internalIDs := make([]imap.InternalMessageID, 0, len(created))
+
+	for range created {
+		internalIDs = append(internalIDs, imap.NewInternalMessageID())
+	}
+
+	return cache.stateUpdates, internalIDs, created, literals, nil
 }
 
 func (sc *stateConnectorImpl) GetMessageLiteral(ctx context.Context, id imap.MessageID) ([]byte, error) {

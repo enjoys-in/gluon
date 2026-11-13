@@ -14,6 +14,13 @@ var ErrMessageSizeExceedsLimits = errors.New("message size exceeds limits")
 var ErrOverQuota = errors.New("quota exceeded")
 var ErrSpecialUseNotSupported = errors.New("special use not supported")
 
+// MessageToCreate is one of the messages CreateMessages is asked to create.
+type MessageToCreate struct {
+	Literal []byte
+	Flags   imap.FlagSet
+	Date    time.Time
+}
+
 // Connector connects the gluon server to a remote mail store.
 type Connector interface {
 	// Init the connector. The cache pointer provide here should not be used with any of the other methods.
@@ -49,6 +56,11 @@ type Connector interface {
 
 	// CreateMessage creates a new message on the remote.
 	CreateMessage(ctx context.Context, cache IMAPStateWrite, mboxID imap.MailboxID, literal []byte, flags imap.FlagSet, date time.Time) (imap.Message, []byte, error)
+
+	// CreateMessages creates the messages of an APPEND command that carries more than one message. Either all of them
+	// are created or none: when one cannot be created, the connector keeps none of them and returns the error. The
+	// messages and their literals are returned in the order they were given.
+	CreateMessages(ctx context.Context, cache IMAPStateWrite, mboxID imap.MailboxID, messages []MessageToCreate) ([]imap.Message, [][]byte, error)
 
 	// AddMessagesToMailbox adds the given messages to the given mailbox.
 	AddMessagesToMailbox(ctx context.Context, cache IMAPStateWrite, messageIDs []imap.MessageID, mboxID imap.MailboxID) error

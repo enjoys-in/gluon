@@ -22,6 +22,11 @@ func (s *Session) handleAppend(ctx context.Context, tag string, cmd *command.App
 		return err
 	}
 
+	// RFC 3502 MULTIAPPEND Extension
+	if len(cmd.More) > 0 {
+		return s.handleMultiAppend(ctx, tag, cmd, nameUTF8, ch)
+	}
+
 	flags, err := validateStoreFlags(cmd.Flags)
 	if err != nil {
 		return response.Bad(tag).WithError(err)

@@ -117,6 +117,22 @@ func (mr *MockConnectorMockRecorder) CreateMessage(ctx, cache, mboxID, literal, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMessage", reflect.TypeOf((*MockConnector)(nil).CreateMessage), ctx, cache, mboxID, literal, flags, date)
 }
 
+// CreateMessages mocks base method.
+func (m *MockConnector) CreateMessages(ctx context.Context, cache connector.IMAPStateWrite, mboxID imap.MailboxID, messages []connector.MessageToCreate) ([]imap.Message, [][]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateMessages", ctx, cache, mboxID, messages)
+	ret0, _ := ret[0].([]imap.Message)
+	ret1, _ := ret[1].([][]byte)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// CreateMessages indicates an expected call of CreateMessages.
+func (mr *MockConnectorMockRecorder) CreateMessages(ctx, cache, mboxID, messages any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMessages", reflect.TypeOf((*MockConnector)(nil).CreateMessages), ctx, cache, mboxID, messages)
+}
+
 // DeleteMailbox mocks base method.
 func (m *MockConnector) DeleteMailbox(ctx context.Context, cache connector.IMAPStateWrite, mboxID imap.MailboxID) error {
 	m.ctrl.T.Helper()

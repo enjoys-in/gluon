@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/ProtonMail/gluon/connector"
 	"github.com/ProtonMail/gluon/db"
 	"github.com/ProtonMail/gluon/imap"
 	"github.com/ProtonMail/gluon/imap/command"
@@ -49,6 +50,15 @@ type Connector interface {
 		flags imap.FlagSet,
 		date time.Time,
 	) ([]Update, imap.InternalMessageID, imap.Message, []byte, error)
+
+	// CreateMessages appends several message literals to the mailbox with the given ID. The connector creates all of
+	// them or none.
+	CreateMessages(
+		ctx context.Context,
+		tx db.Transaction,
+		mboxID imap.MailboxID,
+		messages []connector.MessageToCreate,
+	) ([]Update, []imap.InternalMessageID, []imap.Message, [][]byte, error)
 
 	// GetMessageLiteral retrieves the message literal from the connector.
 	// Note: this can get called from different go routines.
