@@ -76,7 +76,8 @@ func (s *Session) handleCommand(
 		*command.Append,
 		*command.GetQuota,
 		*command.GetQuotaRoot,
-		*command.Namespace:
+		*command.Namespace,
+		*command.Unauthenticate:
 		return s.handleAuthenticatedCommand(ctx, tag, cmd, ch)
 	case
 		*command.Check,
@@ -215,6 +216,10 @@ func (s *Session) handleAuthenticatedCommand(
 	case *command.Namespace:
 		// RFC 2342 NAMESPACE Command
 		return s.handleNamespace(ctx, tag, cmd, ch)
+
+	case *command.Unauthenticate:
+		// RFC 8437 UNAUTHENTICATE Command
+		return s.handleUnauthenticate(ctx, tag, cmd, ch)
 
 	default:
 		return fmt.Errorf("bad command")
