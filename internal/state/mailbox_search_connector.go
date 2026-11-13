@@ -156,6 +156,7 @@ func getSearchKeyOwner(key command.SearchKey) searchKeyOwner {
 		*command.SearchKeyCC,
 		*command.SearchKeyFrom,
 		*command.SearchKeyHeader,
+		*command.SearchKeyOlder,
 		*command.SearchKeyOn,
 		*command.SearchKeySentBefore,
 		*command.SearchKeySentOn,
@@ -163,7 +164,8 @@ func getSearchKeyOwner(key command.SearchKey) searchKeyOwner {
 		*command.SearchKeySince,
 		*command.SearchKeySubject,
 		*command.SearchKeyText,
-		*command.SearchKeyTo:
+		*command.SearchKeyTo,
+		*command.SearchKeyYounger:
 		return searchKeyOwnerConnector
 
 	case *command.SearchKeyNot:

@@ -27,6 +27,8 @@ func TestGetSearchKeyOwner(t *testing.T) {
 		{name: "text", key: &command.SearchKeyText{Value: "a"}, want: searchKeyOwnerConnector},
 		{name: "since", key: &command.SearchKeySince{Value: time.Now()}, want: searchKeyOwnerConnector},
 		{name: "sent before", key: &command.SearchKeySentBefore{Value: time.Now()}, want: searchKeyOwnerConnector},
+		{name: "older", key: &command.SearchKeyOlder{Value: 60}, want: searchKeyOwnerConnector},
+		{name: "younger", key: &command.SearchKeyYounger{Value: 60}, want: searchKeyOwnerConnector},
 
 		{name: "all", key: &command.SearchKeyAll{}, want: searchKeyOwnerGluon},
 		{name: "unseen", key: unseen, want: searchKeyOwnerGluon},

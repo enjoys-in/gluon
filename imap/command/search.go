@@ -500,6 +500,22 @@ func handleSearchKey(keyword rfcparser.String, p *rfcparser.Parser, depth int) (
 
 		return &SearchKeyLarger{Value: value}, nil
 
+	case "older":
+		value, err := parseSearchKeyInterval(p)
+		if err != nil {
+			return nil, err
+		}
+
+		return &SearchKeyOlder{Value: value}, nil
+
+	case "younger":
+		value, err := parseSearchKeyInterval(p)
+		if err != nil {
+			return nil, err
+		}
+
+		return &SearchKeyYounger{Value: value}, nil
+
 	case "not":
 		if err := p.Consume(rfcparser.TokenTypeSP, "expected space after NOT"); err != nil {
 			return nil, err
