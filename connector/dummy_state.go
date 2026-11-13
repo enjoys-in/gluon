@@ -22,8 +22,9 @@ type dummyState struct {
 }
 
 type dummyMailbox struct {
-	mboxName  []string
-	exclusive bool
+	mboxName     []string
+	exclusive    bool
+	unsubscribed bool
 }
 
 type dummyMessage struct {

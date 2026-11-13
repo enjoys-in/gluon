@@ -468,7 +468,12 @@ func (state *State) Subscribe(ctx context.Context, name string) error {
 			return nil, ErrAlreadySubscribed
 		}
 
-		return nil, tx.SetMailboxSubscribed(ctx, mbox.ID, true)
+		updates, err := state.setRemoteMailboxSubscribed(ctx, tx, mbox, true)
+		if err != nil {
+			return nil, err
+		}
+
+		return updates, tx.SetMailboxSubscribed(ctx, mbox.ID, true)
 	})
 }
 
@@ -490,8 +495,22 @@ func (state *State) Unsubscribe(ctx context.Context, name string) error {
 			return nil, ErrAlreadyUnsubscribed
 		}
 
-		return nil, tx.SetMailboxSubscribed(ctx, mbox.ID, false)
+		updates, err := state.setRemoteMailboxSubscribed(ctx, tx, mbox, false)
+		if err != nil {
+			return nil, err
+		}
+
+		return updates, tx.SetMailboxSubscribed(ctx, mbox.ID, false)
 	})
+}
+
+// setRemoteMailboxSubscribed tells the connector about the subscription. The recovery mailbox only exists in Gluon.
+func (state *State) setRemoteMailboxSubscribed(ctx context.Context, tx db.Transaction, mbox *db.Mailbox, subscribed bool) ([]Update, error) {
+	if mbox.ID == state.user.GetRecoveryMailboxID().InternalID {
+		return nil, nil
+	}
+
+	return state.user.GetRemote().SetMailboxSubscribed(ctx, tx, mbox.RemoteID, subscribed)
 }
 
 func (state *State) Idle(ctx context.Context, fn func([]response.Response, chan response.Response) error) error {

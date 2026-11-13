@@ -32,6 +32,8 @@ type Connector interface {
 	MailboxDeleted(imap.MailboxID) error
 	SetMailboxVisibility(imap.MailboxID, imap.MailboxVisibility)
 	RenameMailbox(id imap.MailboxID, newName []string) error
+	MailboxSubscribed(id imap.MailboxID, subscribed bool) error
+	IsMailboxSubscribed(id imap.MailboxID) bool
 
 	SetAllowMessageCreateWithUnknownMailboxID(value bool)
 
@@ -149,6 +151,16 @@ func (s *testSession) mailboxRenamed(user string, mboxID imap.MailboxID, newName
 	require.NoError(s.tb, s.conns[s.userIDs[user]].RenameMailbox(mboxID, newName))
 
 	s.conns[s.userIDs[user]].Flush()
+}
+
+func (s *testSession) mailboxSubscribed(user string, mboxID imap.MailboxID, subscribed bool) {
+	require.NoError(s.tb, s.conns[s.userIDs[user]].MailboxSubscribed(mboxID, subscribed))
+
+	s.conns[s.userIDs[user]].Flush()
+}
+
+func (s *testSession) isMailboxSubscribed(user string, mboxID imap.MailboxID) bool {
+	return s.conns[s.userIDs[user]].IsMailboxSubscribed(mboxID)
 }
 
 func (s *testSession) setAllowMessageCreateWithUnknownMailboxID(user string, value bool) {

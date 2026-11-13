@@ -162,6 +162,20 @@ func (mr *MockConnectorMockRecorder) GetQuotaRoot(arg0, arg1 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetQuotaRoot", reflect.TypeOf((*MockConnector)(nil).GetQuotaRoot), arg0, arg1)
 }
 
+// SetMailboxSubscribed mocks base method.
+func (m *MockConnector) SetMailboxSubscribed(ctx context.Context, cache connector.IMAPStateWrite, mboxID imap.MailboxID, subscribed bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetMailboxSubscribed", ctx, cache, mboxID, subscribed)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetMailboxSubscribed indicates an expected call of SetMailboxSubscribed.
+func (mr *MockConnectorMockRecorder) SetMailboxSubscribed(ctx, cache, mboxID, subscribed any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetMailboxSubscribed", reflect.TypeOf((*MockConnector)(nil).SetMailboxSubscribed), ctx, cache, mboxID, subscribed)
+}
+
 // SearchMessages mocks base method.
 func (m *MockConnector) SearchMessages(ctx context.Context, mboxID imap.MailboxID, keys []command.SearchKey) ([]imap.MessageID, bool, error) {
 	m.ctrl.T.Helper()

@@ -34,6 +34,9 @@ type Connector interface {
 	// DeleteMailbox deletes the mailbox with the given ID and name.
 	DeleteMailbox(ctx context.Context, tx db.Transaction, mboxID imap.MailboxID) ([]Update, error)
 
+	// SetMailboxSubscribed sets whether the mailbox with the given ID is subscribed.
+	SetMailboxSubscribed(ctx context.Context, tx db.Transaction, mboxID imap.MailboxID, subscribed bool) ([]Update, error)
+
 	// CreateMessage appends a message literal to the mailbox with the given ID.
 	CreateMessage(
 		ctx context.Context,

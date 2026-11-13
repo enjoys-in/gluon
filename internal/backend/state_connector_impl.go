@@ -82,6 +82,18 @@ func (sc *stateConnectorImpl) DeleteMailbox(ctx context.Context, tx db.Transacti
 	return cache.stateUpdates, nil
 }
 
+func (sc *stateConnectorImpl) SetMailboxSubscribed(ctx context.Context, tx db.Transaction, mboxID imap.MailboxID, subscribed bool) ([]state.Update, error) {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	cache := sc.newDBIMAPWrite(tx)
+
+	if err := sc.connector.SetMailboxSubscribed(ctx, &cache, mboxID, subscribed); err != nil {
+		return nil, err
+	}
+
+	return cache.stateUpdates, nil
+}
+
 func (sc *stateConnectorImpl) CreateMessage(
 	ctx context.Context,
 	tx db.Transaction,

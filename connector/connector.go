@@ -37,6 +37,10 @@ type Connector interface {
 	// DeleteMailbox deletes the mailbox with the given ID.
 	DeleteMailbox(ctx context.Context, cache IMAPStateWrite, mboxID imap.MailboxID) error
 
+	// SetMailboxSubscribed sets whether the mailbox with the given ID is subscribed. Returning an error rejects the
+	// change. A connector that does not store subscriptions returns nil and Gluon keeps them.
+	SetMailboxSubscribed(ctx context.Context, cache IMAPStateWrite, mboxID imap.MailboxID, subscribed bool) error
+
 	// CreateMessage creates a new message on the remote.
 	CreateMessage(ctx context.Context, cache IMAPStateWrite, mboxID imap.MailboxID, literal []byte, flags imap.FlagSet, date time.Time) (imap.Message, []byte, error)
 
