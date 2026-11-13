@@ -1,19 +1,21 @@
-package command
+package tests
 
 import (
-	"bytes"
+	"strings"
 	"testing"
+
+	"github.com/ProtonMail/gluon/imap/command"
 
 	"github.com/ProtonMail/gluon/rfcparser"
 	"github.com/stretchr/testify/require"
 )
 
-func newLiteralTestParser(input string) (*Parser, *int) {
+func newLiteralTestParser(input string) (*command.Parser, *int) {
 	continuations := new(int)
 
-	p := NewParser(
-		rfcparser.NewScanner(bytes.NewReader([]byte(input))),
-		WithLiteralContinuationCallback(func(string) error {
+	p := command.NewParser(
+		rfcparser.NewScanner(strings.NewReader(input)),
+		command.WithLiteralContinuationCallback(func(string) error {
 			*continuations++
 			return nil
 		}),
@@ -27,7 +29,7 @@ func TestParser_NonSynchronizingLiteralNeedsNoContinuation(t *testing.T) {
 
 	cmd, err := p.Parse()
 	require.NoError(t, err)
-	require.Equal(t, Command{Tag: "tag", Payload: &Login{UserID: "user", Password: "pass"}}, cmd)
+	require.Equal(t, command.Command{Tag: "tag", Payload: &command.Login{UserID: "user", Password: "pass"}}, cmd)
 	require.Zero(t, *continuations)
 }
 
@@ -36,7 +38,7 @@ func TestParser_SynchronizingLiteralStillAsksForContinuation(t *testing.T) {
 
 	cmd, err := p.Parse()
 	require.NoError(t, err)
-	require.Equal(t, Command{Tag: "tag", Payload: &Login{UserID: "user", Password: "pass"}}, cmd)
+	require.Equal(t, command.Command{Tag: "tag", Payload: &command.Login{UserID: "user", Password: "pass"}}, cmd)
 	require.Equal(t, 2, *continuations)
 }
 
@@ -45,7 +47,7 @@ func TestParser_MixedLiterals(t *testing.T) {
 
 	cmd, err := p.Parse()
 	require.NoError(t, err)
-	require.Equal(t, Command{Tag: "tag", Payload: &Login{UserID: "user", Password: "pass"}}, cmd)
+	require.Equal(t, command.Command{Tag: "tag", Payload: &command.Login{UserID: "user", Password: "pass"}}, cmd)
 	require.Equal(t, 1, *continuations)
 }
 
@@ -55,7 +57,7 @@ func TestParser_NonSynchronizingLiteralInAppend(t *testing.T) {
 	cmd, err := p.Parse()
 	require.NoError(t, err)
 
-	appendCmd, ok := cmd.Payload.(*Append)
+	appendCmd, ok := cmd.Payload.(*command.Append)
 	require.True(t, ok)
 	require.Equal(t, "INBOX", appendCmd.Mailbox)
 	require.Equal(t, []byte("To: a@b.c\r\n"), appendCmd.Literal)
@@ -67,7 +69,7 @@ func TestParser_NonSynchronizingLiteralKeepsBinaryData(t *testing.T) {
 
 	cmd, err := p.Parse()
 	require.NoError(t, err)
-	require.Equal(t, Command{Tag: "tag", Payload: &Login{UserID: "user", Password: "a\r\nb{1"}}, cmd)
+	require.Equal(t, command.Command{Tag: "tag", Payload: &command.Login{UserID: "user", Password: "a\r\nb{1"}}, cmd)
 }
 
 func TestParser_ListMailboxAsNonSynchronizingLiteral(t *testing.T) {
@@ -75,7 +77,7 @@ func TestParser_ListMailboxAsNonSynchronizingLiteral(t *testing.T) {
 
 	cmd, err := p.Parse()
 	require.NoError(t, err)
-	require.Equal(t, Command{Tag: "tag", Payload: &List{Mailbox: "", ListMailbox: "INBOX"}}, cmd)
+	require.Equal(t, command.Command{Tag: "tag", Payload: &command.List{Mailbox: "", ListMailbox: "INBOX"}}, cmd)
 	require.Zero(t, *continuations)
 }
 
@@ -84,7 +86,7 @@ func TestParser_ListMailboxAsSynchronizingLiteral(t *testing.T) {
 
 	cmd, err := p.Parse()
 	require.NoError(t, err)
-	require.Equal(t, Command{Tag: "tag", Payload: &List{Mailbox: "", ListMailbox: "INBOX"}}, cmd)
+	require.Equal(t, command.Command{Tag: "tag", Payload: &command.List{Mailbox: "", ListMailbox: "INBOX"}}, cmd)
 	require.Equal(t, 1, *continuations)
 }
 
@@ -104,7 +106,7 @@ func TestParser_InvalidLiteralMarkers(t *testing.T) {
 	}
 }
 
-func parseAfterInvalidCommand(t *testing.T, input string) Command {
+func parseAfterInvalidCommand(t *testing.T, input string) command.Command {
 	t.Helper()
 
 	p, continuations := newLiteralTestParser(input)
@@ -123,37 +125,37 @@ func parseAfterInvalidCommand(t *testing.T, input string) Command {
 func TestParser_ConsumeInvalidInputSkipsNonSynchronizingLiteral(t *testing.T) {
 	cmd := parseAfterInvalidCommand(t, "tag BOGUS {5+}\r\nhello\r\ntag2 NOOP\r\n")
 
-	require.Equal(t, Command{Tag: "tag2", Payload: &Noop{}}, cmd)
+	require.Equal(t, command.Command{Tag: "tag2", Payload: &command.Noop{}}, cmd)
 }
 
 func TestParser_ConsumeInvalidInputSkipsChainedLiterals(t *testing.T) {
 	cmd := parseAfterInvalidCommand(t, "tag BOGUS {5+}\r\nhello {3+}\r\nabc tail\r\ntag2 NOOP\r\n")
 
-	require.Equal(t, Command{Tag: "tag2", Payload: &Noop{}}, cmd)
+	require.Equal(t, command.Command{Tag: "tag2", Payload: &command.Noop{}}, cmd)
 }
 
 func TestParser_ConsumeInvalidInputDoesNotRunCommandsInsideLiteral(t *testing.T) {
 	cmd := parseAfterInvalidCommand(t, "tag BOGUS {19+}\r\nevil CREATE owned\r\n\r\ntag2 NOOP\r\n")
 
-	require.Equal(t, Command{Tag: "tag2", Payload: &Noop{}}, cmd)
+	require.Equal(t, command.Command{Tag: "tag2", Payload: &command.Noop{}}, cmd)
 }
 
 func TestParser_ConsumeInvalidInputSkipsLiteralWhenErrorIsAtTheMarker(t *testing.T) {
 	cmd := parseAfterInvalidCommand(t, "tag FETCH 1 {5+}\r\nhello\r\ntag2 NOOP\r\n")
 
-	require.Equal(t, Command{Tag: "tag2", Payload: &Noop{}}, cmd)
+	require.Equal(t, command.Command{Tag: "tag2", Payload: &command.Noop{}}, cmd)
 }
 
 func TestParser_ConsumeInvalidInputLeavesSynchronizingLiteralAlone(t *testing.T) {
 	cmd := parseAfterInvalidCommand(t, "tag BOGUS {5}\r\ntag2 NOOP\r\n")
 
-	require.Equal(t, Command{Tag: "tag2", Payload: &Noop{}}, cmd)
+	require.Equal(t, command.Command{Tag: "tag2", Payload: &command.Noop{}}, cmd)
 }
 
 func TestParser_ConsumeInvalidInputIgnoresMarkerInsideParsedLiteral(t *testing.T) {
 	cmd := parseAfterInvalidCommand(t, "tag LOGIN {4+}\r\n{9+}\r\ntag2 NOOP\r\n")
 
-	require.Equal(t, Command{Tag: "tag2", Payload: &Noop{}}, cmd)
+	require.Equal(t, command.Command{Tag: "tag2", Payload: &command.Noop{}}, cmd)
 }
 
 func TestParser_ConsumeInvalidInputRejectsOversizedLiteral(t *testing.T) {
@@ -163,5 +165,18 @@ func TestParser_ConsumeInvalidInputRejectsOversizedLiteral(t *testing.T) {
 		_, err := p.Parse()
 		require.Error(t, err)
 		require.Error(t, p.ConsumeInvalidInput())
+	}
+}
+
+func TestParser_ConsumeInvalidInputOnlySkipsAfterAMarkerThatEndsTheLine(t *testing.T) {
+	for _, input := range []string{
+		"tag BOGUS {5+} junk\r\ntag2 NOOP\r\n",
+		"tag BOGUS {+}\r\ntag2 NOOP\r\n",
+		"tag BOGUS 5+}\r\ntag2 NOOP\r\n",
+		"tag BOGUS junk\r\ntag2 NOOP\r\n",
+	} {
+		cmd := parseAfterInvalidCommand(t, input)
+
+		require.Equal(t, command.Command{Tag: "tag2", Payload: &command.Noop{}}, cmd, input)
 	}
 }

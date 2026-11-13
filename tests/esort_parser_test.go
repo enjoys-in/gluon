@@ -1,42 +1,42 @@
-package command
+package tests
 
 import (
-	"bytes"
 	"testing"
 
-	"github.com/ProtonMail/gluon/rfcparser"
+	"github.com/ProtonMail/gluon/imap/command"
+
 	"github.com/stretchr/testify/require"
 )
 
-func parseSortCommand(line string) (Command, error) {
-	return NewParser(rfcparser.NewScanner(bytes.NewReader(toIMAPLine(line)))).Parse()
+func parseSortCommand(line string) (command.Command, error) {
+	return parseCommand(line)
 }
 
 func TestParser_SortCommand(t *testing.T) {
 	cmd, err := parseSortCommand(`tag SORT (REVERSE DATE subject) UTF-8 UNSEEN`)
 	require.NoError(t, err)
-	require.Equal(t, Command{Tag: "tag", Payload: &Sort{
-		SortKeys: []SortKey{{Reverse: true, Field: "DATE"}, {Field: "SUBJECT"}},
+	require.Equal(t, command.Command{Tag: "tag", Payload: &command.Sort{
+		SortKeys: []command.SortKey{{Reverse: true, Field: "DATE"}, {Field: "SUBJECT"}},
 		Charset:  "UTF-8",
-		Keys:     []SearchKey{&SearchKeyUnseen{}},
+		Keys:     []command.SearchKey{&command.SearchKeyUnseen{}},
 	}}, cmd)
 }
 
 func TestParser_SortCommandWithReturnOptions(t *testing.T) {
 	cmd, err := parseSortCommand(`tag SORT RETURN (min COUNT) (DATE) UTF-8 ALL`)
 	require.NoError(t, err)
-	require.Equal(t, Command{Tag: "tag", Payload: &Sort{
-		SortKeys: []SortKey{{Field: "DATE"}},
+	require.Equal(t, command.Command{Tag: "tag", Payload: &command.Sort{
+		SortKeys: []command.SortKey{{Field: "DATE"}},
 		Charset:  "UTF-8",
-		Keys:     []SearchKey{&SearchKeyAll{}},
-		Return:   []SearchReturnOption{SearchReturnMin, SearchReturnCount},
+		Keys:     []command.SearchKey{&command.SearchKeyAll{}},
+		Return:   []command.SearchReturnOption{command.SearchReturnMin, command.SearchReturnCount},
 	}}, cmd)
 }
 
 func TestParser_SortCommandWithEmptyReturnOptionsMeansAll(t *testing.T) {
 	cmd, err := parseSortCommand(`tag SORT RETURN () (DATE) UTF-8 ALL`)
 	require.NoError(t, err)
-	require.Equal(t, []SearchReturnOption{SearchReturnAll}, cmd.Payload.(*Sort).Return)
+	require.Equal(t, []command.SearchReturnOption{command.SearchReturnAll}, cmd.Payload.(*command.Sort).Return)
 }
 
 func TestParser_SortCommandWithReturnOptionsFailures(t *testing.T) {

@@ -1,18 +1,20 @@
-package command
+package tests
 
 import (
 	"testing"
 
+	"github.com/ProtonMail/gluon/imap/command"
+
 	"github.com/stretchr/testify/require"
 )
 
-func parseList(t *testing.T, line string) *List {
+func parseList(t *testing.T, line string) *command.List {
 	t.Helper()
 
-	cmd, err := testParseCommand(line)
+	cmd, err := parseCommand(line)
 	require.NoError(t, err)
 
-	list, ok := cmd.Payload.(*List)
+	list, ok := cmd.Payload.(*command.List)
 	require.True(t, ok)
 
 	return list
@@ -29,8 +31,8 @@ func TestParser_ListExtendedSelectOptions(t *testing.T) {
 	list := parseList(t, `tag LIST (SUBSCRIBED REMOTE RECURSIVEMATCH SPECIAL-USE) "" "*"`)
 
 	require.True(t, list.Extended.Used)
-	require.Equal(t, ListSelectOptions{Subscribed: true, Remote: true, RecursiveMatch: true, SpecialUse: true}, list.Extended.Select)
-	require.Equal(t, ListReturnOptions{}, list.Extended.Return)
+	require.Equal(t, command.ListSelectOptions{Subscribed: true, Remote: true, RecursiveMatch: true, SpecialUse: true}, list.Extended.Select)
+	require.Equal(t, command.ListReturnOptions{}, list.Extended.Return)
 	require.Empty(t, list.Mailbox)
 	require.Equal(t, "*", list.ListMailbox)
 }
@@ -39,7 +41,7 @@ func TestParser_ListExtendedEmptySelectOptions(t *testing.T) {
 	list := parseList(t, `tag LIST () "ref" %`)
 
 	require.True(t, list.Extended.Used)
-	require.Equal(t, ListSelectOptions{}, list.Extended.Select)
+	require.Equal(t, command.ListSelectOptions{}, list.Extended.Select)
 	require.Equal(t, "ref", list.Mailbox)
 	require.Equal(t, "%", list.ListMailbox)
 }
@@ -47,8 +49,8 @@ func TestParser_ListExtendedEmptySelectOptions(t *testing.T) {
 func TestParser_ListExtendedOptionsAreCaseInsensitive(t *testing.T) {
 	list := parseList(t, `tag list (subscribed special-use) "" "*" return (children Subscribed)`)
 
-	require.Equal(t, ListSelectOptions{Subscribed: true, SpecialUse: true}, list.Extended.Select)
-	require.Equal(t, ListReturnOptions{Subscribed: true, Children: true}, list.Extended.Return)
+	require.Equal(t, command.ListSelectOptions{Subscribed: true, SpecialUse: true}, list.Extended.Select)
+	require.Equal(t, command.ListReturnOptions{Subscribed: true, Children: true}, list.Extended.Return)
 }
 
 func TestParser_ListExtendedMultiplePatterns(t *testing.T) {
@@ -70,32 +72,32 @@ func TestParser_ListExtendedReturnOptions(t *testing.T) {
 	list := parseList(t, `tag LIST "" "*" RETURN (SUBSCRIBED CHILDREN SPECIAL-USE)`)
 
 	require.True(t, list.Extended.Used)
-	require.Equal(t, ListReturnOptions{Subscribed: true, Children: true, SpecialUse: true}, list.Extended.Return)
+	require.Equal(t, command.ListReturnOptions{Subscribed: true, Children: true, SpecialUse: true}, list.Extended.Return)
 }
 
 func TestParser_ListExtendedEmptyReturnOptions(t *testing.T) {
 	list := parseList(t, `tag LIST "" "*" RETURN ()`)
 
 	require.True(t, list.Extended.Used)
-	require.Equal(t, ListReturnOptions{}, list.Extended.Return)
+	require.Equal(t, command.ListReturnOptions{}, list.Extended.Return)
 }
 
 func TestParser_ListExtendedReturnStatus(t *testing.T) {
 	list := parseList(t, `tag LIST "" % RETURN (CHILDREN STATUS (MESSAGES UNSEEN) SPECIAL-USE)`)
 
-	require.Equal(t, ListReturnOptions{
+	require.Equal(t, command.ListReturnOptions{
 		Children:   true,
 		SpecialUse: true,
-		Status:     []StatusAttribute{StatusAttributeMessages, StatusAttributeUnseen},
+		Status:     []command.StatusAttribute{command.StatusAttributeMessages, command.StatusAttributeUnseen},
 	}, list.Extended.Return)
 }
 
 func TestParser_ListExtendedEverything(t *testing.T) {
 	list := parseList(t, `tag LIST (SUBSCRIBED RECURSIVEMATCH) "" ("INBOX" "Work/*") RETURN (STATUS (UIDNEXT))`)
 
-	require.Equal(t, ListSelectOptions{Subscribed: true, RecursiveMatch: true}, list.Extended.Select)
+	require.Equal(t, command.ListSelectOptions{Subscribed: true, RecursiveMatch: true}, list.Extended.Select)
 	require.Equal(t, []string{"INBOX", "Work/*"}, list.Patterns())
-	require.Equal(t, []StatusAttribute{StatusAttributeUIDNext}, list.Extended.Return.Status)
+	require.Equal(t, []command.StatusAttribute{command.StatusAttributeUIDNext}, list.Extended.Return.Status)
 }
 
 func TestParser_ListExtendedInvalid(t *testing.T) {
@@ -118,7 +120,7 @@ func TestParser_ListExtendedInvalid(t *testing.T) {
 		"status with unknown attribute":       `tag LIST "" "*" RETURN (STATUS (BOGUS))`,
 	} {
 		t.Run(name, func(t *testing.T) {
-			_, err := testParseCommand(line)
+			_, err := parseCommand(line)
 			require.Error(t, err)
 		})
 	}

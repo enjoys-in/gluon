@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"net"
 	"path/filepath"
 	"slices"
@@ -80,6 +81,7 @@ type serverOptions struct {
 	reporter                reporter.Reporter
 	uidValidityGenerator    imap.UIDValidityGenerator
 	database                db.ClientInterface
+	loggerIn, loggerOut     io.Writer
 }
 
 func (s *serverOptions) defaultUsername() string {
@@ -284,6 +286,10 @@ func runServer(tb testing.TB, options *serverOptions, tests func(session *testSe
 	loggerOut := logrus.StandardLogger().WriterLevel(logrus.TraceLevel)
 	defer loggerOut.Close()
 
+	if options.loggerIn == nil {
+		options.loggerIn, options.loggerOut = loggerIn, loggerOut
+	}
+
 	// Create a test reporter to capture reported messages.
 	reporter := new(testReporter)
 
@@ -300,8 +306,8 @@ func runServer(tb testing.TB, options *serverOptions, tests func(session *testSe
 			MinVersion:   tls.VersionTLS13,
 		}),
 		gluon.WithLogger(
-			loggerIn,
-			loggerOut,
+			options.loggerIn,
+			options.loggerOut,
 		),
 		gluon.WithVersionInfo(
 			testServerVersionInfo.Version.Major,

@@ -1,10 +1,13 @@
-package connector
+package tests
 
 import (
 	"context"
 	"slices"
 	"testing"
 	"time"
+
+	"github.com/ProtonMail/gluon/connector"
+	"github.com/ProtonMail/gluon/internal/utils"
 
 	"github.com/ProtonMail/gluon/imap"
 	"github.com/ProtonMail/gluon/imap/command"
@@ -16,25 +19,45 @@ const (
 	searchTestHoliday = "From: friend@example.com\r\nTo: user@example.com\r\nCc: other@example.com\r\nSubject: Holiday plans\r\n\r\nLet us meet in March.\r\n"
 )
 
-func newSearchTestDummy(t *testing.T) (*Dummy, imap.MailboxID, imap.MessageID, imap.MessageID) {
+func newSearchTestDummy(t *testing.T) (*connector.Dummy, imap.MailboxID, imap.MessageID, imap.MessageID) {
 	t.Helper()
 
-	conn := NewDummy([]string{"username"}, []byte("password"), defaultPeriod, defaultFlags, defaultPermanentFlags, defaultAttributes)
+	conn := connector.NewDummy([]string{"username"}, []byte("password"), defaultPeriod, defaultFlags, defaultPermanentFlags, defaultAttributes)
 	conn.SetSearchEnabled(true)
 
-	mbox := conn.state.createMailbox([]string{"Archive"}, false)
+	mboxID := newDummyMailbox(t, conn, "Archive")
 
 	create := func(literal string) imap.MessageID {
-		parsed, err := imap.NewParsedMessage([]byte(literal))
-		require.NoError(t, err)
+		messageID := imap.MessageID(utils.NewRandomMessageID())
 
-		return conn.state.createMessage(mbox.ID, []byte(literal), parsed, false, false, imap.NewFlagSet(), time.Now()).ID
+		require.NoError(t, conn.MessageCreated(
+			imap.Message{ID: messageID, Flags: imap.NewFlagSet(), Date: time.Now()},
+			[]byte(literal),
+			[]imap.MailboxID{mboxID},
+		))
+
+		return messageID
 	}
 
-	return conn, mbox.ID, create(searchTestInvoice), create(searchTestHoliday)
+	invoice, holiday := create(searchTestInvoice), create(searchTestHoliday)
+
+	// No server reads the updates of this connector.
+	conn.ClearUpdates()
+
+	return conn, mboxID, invoice, holiday
 }
 
-func searchDummy(t *testing.T, conn *Dummy, mboxID imap.MailboxID, keys ...command.SearchKey) []imap.MessageID {
+func newDummyMailbox(t *testing.T, conn *connector.Dummy, name string) imap.MailboxID {
+	t.Helper()
+
+	mboxID := imap.MailboxID(utils.NewRandomMailboxID())
+
+	require.NoError(t, conn.MailboxCreated(imap.Mailbox{ID: mboxID, Name: []string{name}}))
+
+	return mboxID
+}
+
+func searchDummy(t *testing.T, conn *connector.Dummy, mboxID imap.MailboxID, keys ...command.SearchKey) []imap.MessageID {
 	t.Helper()
 
 	messageIDs, ok, err := conn.SearchMessages(context.Background(), mboxID, keys)
@@ -95,9 +118,9 @@ func TestDummyConnector_SearchMessages(t *testing.T) {
 func TestDummyConnector_SearchMessagesOnlyLooksInTheMailbox(t *testing.T) {
 	conn, _, _, _ := newSearchTestDummy(t)
 
-	other := conn.state.createMailbox([]string{"Other"}, false)
+	other := newDummyMailbox(t, conn, "Other")
 
-	require.Empty(t, searchDummy(t, conn, other.ID, &command.SearchKeyText{Value: "march"}))
+	require.Empty(t, searchDummy(t, conn, other, &command.SearchKeyText{Value: "march"}))
 }
 
 func TestDummyConnector_SearchMessagesDeclinesWhatItCannotEvaluate(t *testing.T) {
@@ -133,6 +156,6 @@ func TestDummyConnector_SearchMessagesUnknownMailbox(t *testing.T) {
 	conn, _, _, _ := newSearchTestDummy(t)
 
 	_, ok, err := conn.SearchMessages(context.Background(), "no-such-mailbox", []command.SearchKey{&command.SearchKeyText{Value: "march"}})
-	require.ErrorIs(t, err, ErrNoSuchMailbox)
+	require.ErrorIs(t, err, connector.ErrNoSuchMailbox)
 	require.False(t, ok)
 }

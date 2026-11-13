@@ -7,12 +7,15 @@ import (
 	"github.com/ProtonMail/gluon/rfcparser"
 )
 
-// newCommandParser returns a command parser that reads the given lines. A line that follows a literal marker is
-// the data of that literal.
-func newCommandParser(lines []string, options ...command.Option) *command.Parser {
-	input := strings.Join(lines, "\r\n") + "\r\n"
+// newScanner returns a scanner that reads the given lines. A line that follows a literal marker is the data of
+// that literal.
+func newScanner(lines ...string) *rfcparser.Scanner {
+	return rfcparser.NewScanner(strings.NewReader(strings.Join(lines, "\r\n") + "\r\n"))
+}
 
-	return command.NewParser(rfcparser.NewScanner(strings.NewReader(input)), options...)
+// newCommandParser returns a command parser that reads the given lines.
+func newCommandParser(lines []string, options ...command.Option) *command.Parser {
+	return command.NewParser(newScanner(lines...), options...)
 }
 
 // parseCommand parses one command without a server.

@@ -1,8 +1,10 @@
-package imap
+package tests
 
 import (
 	"bytes"
 	"testing"
+
+	"github.com/ProtonMail/gluon/imap"
 
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +21,7 @@ func TestNewParsedMessage_DoesNotChangeTheLiteral(t *testing.T) {
 		original := []byte(literal)
 		parsed := bytes.Clone(original)
 
-		message, err := NewParsedMessage(parsed)
+		message, err := imap.NewParsedMessage(parsed)
 		require.NoError(t, err)
 		require.NotEmpty(t, message.Structure)
 		require.NotEmpty(t, message.Envelope)

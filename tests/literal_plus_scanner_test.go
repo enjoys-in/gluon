@@ -1,18 +1,20 @@
-package rfcparser
+package tests
 
 import (
 	"bytes"
 	"testing"
 
+	"github.com/ProtonMail/gluon/rfcparser"
+
 	"github.com/stretchr/testify/require"
 )
 
-func newContinuationCountingParser(t *testing.T, input string) (*Parser, *int) {
+func newContinuationCountingParser(t *testing.T, input string) (*rfcparser.Parser, *int) {
 	t.Helper()
 
 	continuations := new(int)
 
-	p := NewParserWithLiteralContinuationCb(NewScanner(bytes.NewReader([]byte(input))), func(string) error {
+	p := rfcparser.NewParserWithLiteralContinuationCb(rfcparser.NewScanner(bytes.NewReader([]byte(input))), func(string) error {
 		*continuations++
 		return nil
 	})

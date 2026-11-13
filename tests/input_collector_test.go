@@ -1,4 +1,4 @@
-package command
+package tests
 
 import (
 	"bufio"
@@ -6,14 +6,19 @@ import (
 	"io"
 	"testing"
 
+	"github.com/ProtonMail/gluon/imap/command"
+
 	"github.com/stretchr/testify/require"
 )
 
-func newTestInputCollector(input []byte) *InputCollector {
-	return NewInputCollector(bufio.NewReader(bytes.NewReader(input)))
+// maxRetainedInputSize is the largest buffer the collector keeps between commands.
+const maxRetainedInputSize = 64 * 1024
+
+func newTestInputCollector(input []byte) *command.InputCollector {
+	return command.NewInputCollector(bufio.NewReader(bytes.NewReader(input)))
 }
 
-func readInput(t *testing.T, collector *InputCollector, n int) {
+func readInput(t *testing.T, collector *command.InputCollector, n int) {
 	t.Helper()
 
 	_, err := io.ReadFull(collector, make([]byte, n))

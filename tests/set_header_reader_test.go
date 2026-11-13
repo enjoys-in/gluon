@@ -1,8 +1,10 @@
-package rfc822
+package tests
 
 import (
 	"io"
 	"testing"
+
+	"github.com/ProtonMail/gluon/rfc822"
 
 	"github.com/stretchr/testify/require"
 )
@@ -13,7 +15,7 @@ func TestSetHeaderValueNoMemCopy_ReaderReportsItsLength(t *testing.T) {
 		"\r\nbody without header",
 		"",
 	} {
-		reader, size, err := SetHeaderValueNoMemCopy([]byte(literal), "X-Key", "value")
+		reader, size, err := rfc822.SetHeaderValueNoMemCopy([]byte(literal), "X-Key", "value")
 		require.NoError(t, err)
 
 		sized, ok := reader.(interface{ Len() int })
@@ -29,7 +31,7 @@ func TestSetHeaderValueNoMemCopy_ReaderReportsItsLength(t *testing.T) {
 		require.NoError(t, err)
 		require.Zero(t, sized.Len())
 
-		expected, err := SetHeaderValue([]byte(literal), "X-Key", "value")
+		expected, err := rfc822.SetHeaderValue([]byte(literal), "X-Key", "value")
 		require.NoError(t, err)
 		require.Equal(t, string(expected), string(head)+string(rest))
 	}

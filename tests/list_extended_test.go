@@ -398,3 +398,31 @@ func TestListStatusInvalid(t *testing.T) {
 		c.S(`A004 OK LIST`)
 	})
 }
+
+func TestListExtendedPatternMatching(t *testing.T) {
+	runOneToOneTestWithAuth(t, defaultServerOptions(t), func(c *testConnection, _ *testSession) {
+		c.C(`A001 CREATE Work/Reports`).OK(`A001`)
+
+		// "%" matches the top level only.
+		c.C(`A002 LIST "" (%)`)
+		c.S(`* LIST (\HasNoChildren \Unmarked) "/" "INBOX"`, `* LIST (\HasChildren \Unmarked) "/" "Work"`)
+		c.OK(`A002`)
+
+		// A mailbox is listed when any of the patterns matches it.
+		c.C(`A003 LIST "" (INBOX Work/%)`)
+		c.S(`* LIST (\HasNoChildren \Unmarked) "/" "INBOX"`, `* LIST (\HasNoChildren \Unmarked) "/" "Work/Reports"`)
+		c.OK(`A003`)
+
+		c.C(`A004 LIST "" (Drafts Sent)`)
+		c.Sx(`^A004 OK`)
+
+		// The reference is put in front of every pattern.
+		c.C(`A005 LIST "Work/" (% Missing)`)
+		c.S(`* LIST (\HasNoChildren \Unmarked) "/" "Work/Reports"`)
+		c.OK(`A005`)
+
+		c.C(`A006 LIST "" (inbox)`)
+		c.S(`* LIST (\HasNoChildren \Unmarked) "/" "INBOX"`)
+		c.OK(`A006`)
+	})
+}

@@ -63,3 +63,19 @@ func TestSortDisplayFailures(t *testing.T) {
 		c.OK(`A004`)
 	})
 }
+
+func TestSortDisplayUsesTheFirstAddress(t *testing.T) {
+	runOneToOneTestWithAuth(t, defaultServerOptions(t), func(c *testConnection, _ *testSession) {
+		for _, to := range []string{
+			"Zoe <zoe@test.com>, Adam <adam@test.com>",
+			"Mia <mia@test.com>",
+		} {
+			c.doAppend("INBOX", "Date: Mon, 01 Jan 2024 10:00:00 +0000\r\nFrom: sender@test.com\r\nTo: "+to+"\r\nSubject: display\r\n\r\nbody").expect("OK")
+		}
+
+		c.C(`A000 SELECT INBOX`).OK(`A000`)
+
+		// "mia" sorts before "zoe". "adam" is not looked at.
+		c.C(`A001 SORT (DISPLAYTO) UTF-8 ALL`).S(`* SORT 2 1`).OK(`A001`)
+	})
+}
