@@ -87,6 +87,10 @@ func NewScannerWithReader(source Reader) *Scanner {
 }
 
 func (s *Scanner) ConsumeBytes(dst []byte) error {
+	if source, ok := s.source.(interface{ Grow(n int) }); ok {
+		source.Grow(len(dst))
+	}
+
 	// We have already read a byte at this point, so we need to
 	// skip this one.
 	dst[0] = s.currentByte
