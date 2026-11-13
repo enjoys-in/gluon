@@ -239,16 +239,18 @@ func TestSearchConnectorIsNotAskedWhenGluonOwnsTheSearch(t *testing.T) {
 	})
 }
 
-func TestSearchConnectorIsNotAskedForOtherCharsets(t *testing.T) {
+func TestSearchConnectorIsAskedForEveryCharset(t *testing.T) {
 	runSearchConnectorTest(t, func(c *testConnection, f searchFixture) {
 		c.C(`A001 SEARCH CHARSET ISO-8859-1 SUBJECT invoice`).S(`* SEARCH 1 3`).OK(`A001`)
-
-		require.Empty(t, f.conn.searches())
-
 		c.C(`A002 SEARCH CHARSET UTF-8 SUBJECT invoice`).S(`* SEARCH 1 3`).OK(`A002`)
 		c.C(`A003 SEARCH CHARSET us-ascii SUBJECT invoice`).S(`* SEARCH 1 3`).OK(`A003`)
 
-		require.Len(t, f.conn.searches(), 2)
+		require.Len(t, f.conn.searches(), 3)
+
+		c.C(`A004 SEARCH CHARSET no-such-charset SUBJECT invoice`)
+		c.Sx(`^A004 NO \[BADCHARSET`)
+
+		require.Len(t, f.conn.searches(), 3)
 	})
 }
 

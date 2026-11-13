@@ -40,7 +40,7 @@ type threadMessageInfo struct {
 // Thread performs the THREAD command per RFC 5256.
 func (m *Mailbox) Thread(ctx context.Context, algorithm string, searchKeys []command.SearchKey, decoder *encoding.Decoder) ([]*response.ThreadNode, error) {
 	// Filter messages using existing search infrastructure.
-	op, err := buildSearchOpListWithKeys(m, searchKeys, decoder)
+	op, err := buildSearchOpWithConnector(ctx, m, searchKeys, decoder)
 	if err != nil {
 		return nil, err
 	}

@@ -44,7 +44,7 @@ func (m *Mailbox) Sort(ctx context.Context, sortKeys []command.SortKey, searchKe
 	}
 
 	// First, filter messages using existing search infrastructure.
-	op, err := buildSearchOpListWithKeys(m, searchKeys, decoder)
+	op, err := buildSearchOpWithConnector(ctx, m, searchKeys, decoder)
 	if err != nil {
 		return nil, err
 	}
