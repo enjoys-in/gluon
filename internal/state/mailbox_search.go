@@ -14,10 +14,10 @@ import (
 	"github.com/ProtonMail/gluon/imap"
 	"github.com/ProtonMail/gluon/imap/command"
 	"github.com/ProtonMail/gluon/internal/contexts"
+	"github.com/ProtonMail/gluon/pkg/utils"
 	"github.com/ProtonMail/gluon/rfc5322"
 	"github.com/ProtonMail/gluon/rfc822"
 	"github.com/bradenaw/juniper/parallel"
-	"github.com/bradenaw/juniper/xslices"
 	"golang.org/x/text/encoding"
 )
 
@@ -78,7 +78,7 @@ func (m *Mailbox) Search(ctx context.Context, keys []command.SearchKey, decoder 
 		return nil, err
 	}
 
-	return xslices.Filter(result, func(v uint32) bool {
+	return utils.Filter(result, func(v uint32) bool {
 		return v != 0
 	}), nil
 }
@@ -374,7 +374,7 @@ func buildSearchOpBody(key *command.SearchKeyBody, decoder *encoding.Decoder) (*
 	keyBytesLower := bytes.ToLower(keyBytes)
 
 	op := func(s *searchData) (bool, error) {
-		section := rfc822.Parse(s.literal)
+		section := rfc822.ParseNoAlloc(s.literal)
 
 		return bytes.Contains(bytes.ToLower(section.Body()), keyBytesLower), nil
 	}

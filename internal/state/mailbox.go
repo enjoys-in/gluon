@@ -207,7 +207,9 @@ func (m *Mailbox) AppendRegular(ctx context.Context, literal []byte, flags imap.
 						return nil, nil, err
 					}
 
-					return m.state.actionAddMessagesToMailbox(ctx, tx,
+					return m.state.actionAddMessagesToMailbox(
+						ctx,
+						tx,
 						[]db.MessageIDPair{{InternalID: msgID, RemoteID: remoteID}},
 						m.id,
 						m.snap == m.state.snap,
@@ -296,15 +298,27 @@ func (m *Mailbox) Copy(ctx context.Context, seq []command.SeqRange, name string)
 	msgIDs := make([]db.MessageIDPair, len(messages))
 	msgUIDs := make([]imap.UID, len(messages))
 
-	for i := 0; i < len(messages); i++ {
+	for i := range messages {
 		snapMsg := messages[i]
 		msgUIDs[i] = snapMsg.UID
 		msgIDs[i] = snapMsg.ID
 	}
 
+	isRecoveryMailbox := m.state.user.GetRecoveryMailboxID().InternalID == m.snap.mboxID.InternalID
+
+	// Fetch recoveredLiterals before a write transaction opens.
+	var recoveredLiterals map[imap.InternalMessageID][]byte
+
+	if isRecoveryMailbox {
+		recoveredLiterals, err = m.state.loadRecoveredMessageLiterals(msgIDs)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	destUIDs, err := stateDBWriteResult(ctx, m.state, func(ctx context.Context, tx db.Transaction) ([]Update, []db.UIDWithFlags, error) {
-		if m.state.user.GetRecoveryMailboxID().InternalID == m.snap.mboxID.InternalID {
-			return m.state.actionCopyMessagesOutOfRecoveryMailbox(ctx, tx, msgIDs, db.NewMailboxIDPair(mbox))
+		if isRecoveryMailbox {
+			return m.state.actionCopyMessagesOutOfRecoveryMailbox(ctx, tx, msgIDs, db.NewMailboxIDPair(mbox), recoveredLiterals)
 		} else {
 			return m.state.actionAddMessagesToMailbox(ctx, tx, msgIDs, db.NewMailboxIDPair(mbox), m.snap == m.state.snap)
 		}
@@ -351,15 +365,27 @@ func (m *Mailbox) Move(ctx context.Context, seq []command.SeqRange, name string)
 	msgIDs := make([]db.MessageIDPair, len(messages))
 	msgUIDs := make([]imap.UID, len(messages))
 
-	for i := 0; i < len(messages); i++ {
+	for i := range messages {
 		snapMsg := messages[i]
 		msgUIDs[i] = snapMsg.UID
 		msgIDs[i] = snapMsg.ID
 	}
 
+	isRecoveryMailbox := m.state.user.GetRecoveryMailboxID().InternalID == m.snap.mboxID.InternalID
+
+	// Fetch recoveredLiterals before a write transaction opens.
+	var recoveredLiterals map[imap.InternalMessageID][]byte
+
+	if isRecoveryMailbox {
+		recoveredLiterals, err = m.state.loadRecoveredMessageLiterals(msgIDs)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	destUIDs, err := stateDBWriteResult(ctx, m.state, func(ctx context.Context, tx db.Transaction) ([]Update, []db.UIDWithFlags, error) {
-		if m.state.user.GetRecoveryMailboxID().InternalID == m.snap.mboxID.InternalID {
-			return m.state.actionMoveMessagesOutOfRecoveryMailbox(ctx, tx, msgIDs, db.NewMailboxIDPair(mbox))
+		if isRecoveryMailbox {
+			return m.state.actionMoveMessagesOutOfRecoveryMailbox(ctx, tx, msgIDs, db.NewMailboxIDPair(mbox), recoveredLiterals)
 		} else {
 			return m.state.actionMoveMessages(ctx, tx, msgIDs, m.snap.mboxID, db.NewMailboxIDPair(mbox))
 		}

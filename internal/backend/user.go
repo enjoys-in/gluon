@@ -11,16 +11,18 @@ import (
 	"github.com/ProtonMail/gluon/imap"
 	"github.com/ProtonMail/gluon/internal/ids"
 	"github.com/ProtonMail/gluon/internal/state"
+	"github.com/ProtonMail/gluon/internal/unleash"
+	"github.com/ProtonMail/gluon/internal/unleash/featureflags"
 	"github.com/ProtonMail/gluon/internal/utils"
 	"github.com/ProtonMail/gluon/limits"
 	"github.com/ProtonMail/gluon/logging"
 	"github.com/ProtonMail/gluon/observability"
 	"github.com/ProtonMail/gluon/observability/metrics"
+	pkgutils "github.com/ProtonMail/gluon/pkg/utils"
 	"github.com/ProtonMail/gluon/reporter"
 	"github.com/ProtonMail/gluon/store"
 	"github.com/bradenaw/juniper/xslices"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/exp/maps"
 )
 
 type user struct {
@@ -160,8 +162,9 @@ func newUser(
 
 	user.updateWG.Add(1)
 
-	// nolint:contextcheck
-	async.GoAnnotated(context.Background(), panicHandler, func(ctx context.Context) {
+	featureFlagProvider := unleash.Get()
+
+	async.GoAnnotated(context.WithoutCancel(ctx), panicHandler, func(ctx context.Context) {
 		defer user.updateWG.Done()
 
 		updateCh := user.updateInjector.GetUpdates()
@@ -174,12 +177,14 @@ func newUser(
 				}
 
 				if err := user.apply(ctx, update); err != nil {
-					// there's no events like this in sentry so far.
-					reporter.MessageWithContext(ctx,
-						"Failed to apply connector update",
-						reporter.Context{"error": err, "update": update.String()},
-					)
-
+					if !featureFlagProvider.GetFlagValue(featureflags.ApplySentryEventsDisabled) {
+						reporter.MessageWithContextAndTags(
+							ctx,
+							"Failed to apply connector update",
+							reporter.Context{"error": err, "update": update.String()},
+							map[string]string{"source": "gluon"},
+						)
+					}
 					log.WithError(err).Errorf("Failed to apply update: %v", err)
 				}
 
@@ -298,8 +303,8 @@ func (user *user) removeState(ctx context.Context, st *state.State) error {
 			return nil, fmt.Errorf("no such state")
 		}
 
-		messageIDs = xslices.Filter(messageIDs, func(messageID imap.InternalMessageID) bool {
-			return xslices.CountFunc(maps.Values(user.states), func(other *state.State) bool {
+		messageIDs = pkgutils.Filter(messageIDs, func(messageID imap.InternalMessageID) bool {
+			return xslices.CountFunc(pkgutils.Values(user.states), func(other *state.State) bool {
 				return st != other && other.HasMessage(messageID)
 			}) == 0
 		})
@@ -372,7 +377,7 @@ func (user *user) cleanupStaleStoreData(ctx context.Context) error {
 		return err
 	}
 
-	idsToDelete := xslices.Filter(storeIds, func(id imap.InternalMessageID) bool {
+	idsToDelete := pkgutils.Filter(storeIds, func(id imap.InternalMessageID) bool {
 		_, ok := dbIdMap[id]
 
 		return !ok

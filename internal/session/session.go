@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,7 +30,6 @@ import (
 	"github.com/ProtonMail/gluon/version"
 	"github.com/emersion/go-imap/utf7"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/exp/slices"
 )
 
 const maxSessionError = 20
@@ -98,6 +98,8 @@ type Session struct {
 	log *logrus.Entry
 
 	featureFlagProvider unleash.FeatureFlagValueProvider
+
+	closeOnce sync.Once
 }
 
 func New(
@@ -171,7 +173,7 @@ func (s *Session) SetTLSConfig(cfg *tls.Config) {
 }
 
 func (s *Session) Serve(ctx context.Context) error {
-	defer s.done(ctx)
+	defer s.done() //nolint: contextcheck
 	defer s.handleWG.Wait()
 
 	if err := s.greet(); err != nil {
@@ -221,7 +223,8 @@ func (s *Session) serve(ctx context.Context) error {
 
 				if s.errorCount += 1; s.errorCount >= maxSessionError {
 					// there's no events like this in sentry so far.
-					reporter.MessageWithContext(ctx,
+					reporter.MessageWithContext(
+						ctx,
 						"Too many errors in session, closing connection",
 						reporter.Context{"ID": s.imapID.String()},
 					)
@@ -304,11 +307,15 @@ func (s *Session) logOutgoing(line string) {
 	writeLog(s.outLogger, "S", strconv.Itoa(s.sessionID), line)
 }
 
-func (s *Session) done(ctx context.Context) {
+func (s *Session) done() {
+	// use the parent context(from session) if there is a need to access context specific values like reporter
+	releaseContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	close(s.eventCh)
 
 	if s.state != nil {
-		if err := s.state.ReleaseState(ctx); err != nil {
+		if err := s.state.ReleaseState(releaseContext); err != nil {
 			s.log.WithError(err).Error("Failed to close state")
 		}
 	}
@@ -325,6 +332,7 @@ func (s *Session) addCapability(capability imap.Capability) {
 	}
 }
 
+// nolint: unused
 func (s *Session) remCapability(capability imap.Capability) {
 	s.capsLock.Lock()
 	defer s.capsLock.Unlock()
@@ -353,4 +361,19 @@ func (s *Session) decodeMailboxName(name string) (string, error) {
 	}
 
 	return utf7.Encoding.NewDecoder().String(fmt.Sprintf("INBOX%v%v", delimiter, split[1]))
+}
+
+func (s *Session) CloseWithBye(reason string) error {
+	var retErr error
+	s.closeOnce.Do(func() {
+		if reason == "" {
+			reason = "Connection closed by server"
+		}
+
+		_ = response.Bye().WithMessage(reason).Send(s)
+		if err := s.conn.Close(); err != nil {
+			retErr = err
+		}
+	})
+	return retErr
 }

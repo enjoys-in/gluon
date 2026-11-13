@@ -2,11 +2,11 @@ package imap
 
 import (
 	"net/mail"
+	"slices"
 	"strconv"
 	"strings"
 
-	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
+	"github.com/ProtonMail/gluon/pkg/utils"
 )
 
 type parListWriter interface {
@@ -41,6 +41,7 @@ func (d *dualParListWriter) writeByte(v byte) {
 	d.b2.WriteByte(v)
 }
 
+// nolint: unused
 func (d *dualParListWriter) toSingleWriterFrom1st() parListWriter {
 	return &singleParListWriter{b: d.b1}
 }
@@ -113,7 +114,7 @@ func (c *paramList) addNumber(writer parListWriter, v int) *paramList {
 func (c *paramList) addMap(writer parListWriter, v map[string]string) *paramList {
 	c.onWrite(writer)
 
-	keys := maps.Keys(v)
+	keys := utils.Keys(v)
 
 	slices.Sort(keys)
 
@@ -129,6 +130,10 @@ func (c *paramList) addMap(writer parListWriter, v map[string]string) *paramList
 }
 
 func (c *paramList) addAddresses(writer parListWriter, v []*mail.Address) *paramList {
+	if len(v) == 0 {
+		return c.addString(writer, "")
+	}
+
 	c.onWrite(writer)
 
 	child := c.newChildList(writer)

@@ -26,7 +26,7 @@ func TestParser_Authenticate(t *testing.T) {
 		var continued bool
 
 		tag := fmt.Sprintf("A%04d", i)
-		authString := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("\x00%s\x00%s", data.UserID, data.Password)))
+		authString := base64.StdEncoding.EncodeToString(fmt.Appendf(nil, "\x00%s\x00%s", data.UserID, data.Password))
 		input := toIMAPLine(tag+` AUTHENTICATE PLAIN`, authString)
 		s := rfcparser.NewScanner(bytes.NewReader(input))
 		p := NewParser(s, WithLiteralContinuationCallback(continuationChecker(&continued)))
@@ -44,7 +44,7 @@ func TestParser_Authenticate(t *testing.T) {
 func TestParser_AuthenticationWithIdentity(t *testing.T) {
 	var continued bool
 
-	authString := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("identity\x00user\x00pass")))
+	authString := base64.StdEncoding.EncodeToString([]byte("identity\x00user\x00pass"))
 	s := rfcparser.NewScanner(bytes.NewReader(toIMAPLine(`A0001 authenticate plain`, authString)))
 	p := NewParser(s, WithLiteralContinuationCallback(continuationChecker(&continued)))
 	cmd, err := p.Parse()

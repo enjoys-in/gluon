@@ -8,16 +8,19 @@ import (
 	"io"
 	"net"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ProtonMail/gluon/liner"
 	"github.com/bradenaw/juniper/xslices"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/exp/slices"
 )
+
+const readTimeout = 15 * time.Second
 
 func withTag(fn func(string)) {
 	fn(uuid.NewString())
@@ -30,7 +33,7 @@ func lines(lines ...string) string {
 func repeat(line string, n int) []string {
 	var res []string
 
-	for i := 0; i < n; i++ {
+	for range n {
 		res = append(res, line)
 	}
 
@@ -38,13 +41,16 @@ func repeat(line string, n int) []string {
 }
 
 func seq(begin, end int) string {
-	var res string
+	var res strings.Builder
 
 	for i := begin; i < end; i++ {
-		res += strconv.Itoa(i) + " "
+		res.WriteString(strconv.Itoa(i))
+		res.WriteString(" ")
 	}
 
-	return res + strconv.Itoa(end)
+	res.WriteString(strconv.Itoa(end))
+
+	return res.String()
 }
 
 type testConnection struct {
@@ -89,7 +95,7 @@ func (s *testConnection) Sx(want ...string) *testConnection {
 	var bad []string
 
 	for _, have := range s.readN(len(want)) {
-		if idx := xslices.IndexFunc(want, func(want string) bool {
+		if idx := slices.IndexFunc(want, func(want string) bool {
 			return regexp.MustCompile(want).Match(have)
 		}); idx >= 0 {
 			want = slices.Delete(want, idx, idx+1)
@@ -99,7 +105,8 @@ func (s *testConnection) Sx(want ...string) *testConnection {
 	}
 
 	if len(bad) > 0 {
-		require.Failf(s.tb,
+		require.Failf(
+			s.tb,
 			"Received unexpected responses",
 			"want: %q\nbut have:%q",
 			want, bad,
@@ -119,7 +126,7 @@ func (s *testConnection) Sxe(want ...string) *testConnection {
 	for len(want) > 0 {
 		have := s.read()
 
-		if idx := xslices.IndexFunc(want, func(want string) bool {
+		if idx := slices.IndexFunc(want, func(want string) bool {
 			return regexp.MustCompile(want).Match(have)
 		}); idx >= 0 {
 			want = slices.Delete(want, idx, idx+1)
@@ -204,6 +211,8 @@ func (s *testConnection) doBench(b *testing.B, cmd string) {
 
 // TODO: This is shitty because the uuid of one literal may appear within the data of another literal.
 func (s *testConnection) read() []byte {
+	require.NoError(s.tb, s.conn.SetReadDeadline(time.Now().Add(readTimeout)))
+
 	line, literals, err := s.liner.Read(func() error { return nil })
 	require.NoError(s.tb, err)
 
@@ -217,7 +226,7 @@ func (s *testConnection) read() []byte {
 func (s *testConnection) readN(n int) [][]byte {
 	var res [][]byte
 
-	for i := 0; i < n; i++ {
+	for range n {
 		res = append(res, s.read())
 	}
 

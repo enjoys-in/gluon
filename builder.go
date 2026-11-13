@@ -11,6 +11,7 @@ import (
 	"github.com/ProtonMail/gluon/db"
 	"github.com/ProtonMail/gluon/imap"
 	"github.com/ProtonMail/gluon/imap/connectioncounter"
+	"github.com/ProtonMail/gluon/imap/connectionlimiter"
 	"github.com/ProtonMail/gluon/internal/backend"
 	"github.com/ProtonMail/gluon/internal/db_impl/sqlite3"
 	"github.com/ProtonMail/gluon/internal/session"
@@ -46,6 +47,7 @@ type serverBuilder struct {
 	observabilitySender      observability.Sender
 	featureFlagProvider      unleash.FeatureFlagValueProvider
 	connectionRollingCounter *connectioncounter.RollingCounter
+	connectionLimiter        connectionlimiter.ConnectionLimiter
 }
 
 func newBuilder() (*serverBuilder, error) {
@@ -116,6 +118,8 @@ func (builder *serverBuilder) build() (*Server, error) {
 		builder.featureFlagProvider = &unleash.NullFeatureFlagProvider{}
 	}
 
+	unleash.Init(builder.featureFlagProvider)
+
 	s := &Server{
 		dataDir:                  builder.dataDir,
 		databaseDir:              builder.databaseDir,
@@ -139,6 +143,7 @@ func (builder *serverBuilder) build() (*Server, error) {
 		observabilitySender:      builder.observabilitySender,
 		connectionRollingCounter: builder.connectionRollingCounter,
 		featureFlagProvider:      builder.featureFlagProvider,
+		connectionLimiter:        builder.connectionLimiter,
 	}
 
 	return s, nil

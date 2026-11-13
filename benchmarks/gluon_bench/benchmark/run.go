@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/ProtonMail/gluon/benchmarks/gluon_bench/flags"
 	"github.com/ProtonMail/gluon/benchmarks/gluon_bench/reporter"
-	"golang.org/x/exp/slices"
 )
 
 func RunMain() {
@@ -78,7 +78,7 @@ func RunMain() {
 
 		benchmarkStats := make([]*reporter.BenchmarkStatistics, 0, numRuns)
 
-		for r := uint(0); r < numRuns; r++ {
+		for r := range numRuns {
 			if *flags.Verbose {
 				fmt.Printf("Benchmark Run: %v\n", r)
 			}
@@ -132,7 +132,7 @@ func measureBenchmark(dirConfig BenchDirConfig, iteration uint, bench Benchmark)
 
 	benchRun, benchErr := bench.Run(ctx)
 	if benchErr != nil {
-		panic(fmt.Sprintf("Failed to run benchmark %v: %v", bench.Name(), err))
+		panic(fmt.Sprintf("Failed to run benchmark %v: %v", bench.Name(), benchErr))
 	}
 
 	if err := bench.TearDown(ctx); err != nil {

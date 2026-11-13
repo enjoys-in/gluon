@@ -3,7 +3,7 @@ package reporter
 import (
 	"fmt"
 	"math"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -18,17 +18,16 @@ type BenchmarkStatistics struct {
 	Median       time.Duration
 	Percentile90 time.Duration
 	Percentile10 time.Duration
-	RMS          time.Duration
+	RMS          time.Duration //nolint:staticcheck //disable ST1011
 	SampleCount  int
 	Extra        BenchmarkExtra
 }
 
 func (b *BenchmarkStatistics) String() string {
 	builder := strings.Builder{}
-	builder.WriteString(fmt.Sprintf("SampleCount:%04d Total:%v Fastest:%v Slowest:%v Average:%v Median:%v 90thPercentile:%v 10thPercentile:%v RMS:%v",
+	fmt.Fprintf(&builder, "SampleCount:%04d Total:%v Fastest:%v Slowest:%v Average:%v Median:%v 90thPercentile:%v 10thPercentile:%v RMS:%v",
 		b.SampleCount, b.Total, b.Fastest, b.Slowest, b.Average,
-		b.Median, b.Percentile90, b.Percentile10, b.RMS,
-	))
+		b.Median, b.Percentile90, b.Percentile10, b.RMS)
 
 	if b.Extra != nil {
 		builder.WriteString(" Extra:\n")
@@ -40,9 +39,7 @@ func (b *BenchmarkStatistics) String() string {
 
 func NewBenchmarkStatistics(extra BenchmarkExtra, durations ...time.Duration) *BenchmarkStatistics {
 	sortedDurations := durations
-	sort.Slice(sortedDurations, func(i1, i2 int) bool {
-		return sortedDurations[i1] < sortedDurations[i2]
-	})
+	slices.Sort(sortedDurations)
 
 	statistics := &BenchmarkStatistics{
 		Extra: extra,

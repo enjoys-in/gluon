@@ -127,7 +127,7 @@ func matchMailboxNamesClient(t testing.TB, client *client.Client, reference stri
 	require.ElementsMatch(t, expectedNames, mailboxes)
 }
 
-func storeWithRetrievalClient(t testing.TB, client *client.Client, seqset *goimap.SeqSet, item goimap.StoreItem, value interface{}) []*goimap.Message {
+func storeWithRetrievalClient(t testing.TB, client *client.Client, seqset *goimap.SeqSet, item goimap.StoreItem, value any) []*goimap.Message {
 	ch := make(chan *goimap.Message)
 
 	go func() {
@@ -137,7 +137,7 @@ func storeWithRetrievalClient(t testing.TB, client *client.Client, seqset *goima
 	return iterator.Collect(iterator.Chan(ch))
 }
 
-func uidStoreWithRetrievalClient(t testing.TB, client *client.Client, seqset *goimap.SeqSet, item goimap.StoreItem, value interface{}) []*goimap.Message {
+func uidStoreWithRetrievalClient(t testing.TB, client *client.Client, seqset *goimap.SeqSet, item goimap.StoreItem, value any) []*goimap.Message {
 	ch := make(chan *goimap.Message)
 
 	go func() {
@@ -155,7 +155,7 @@ type macroFetchCommand struct {
 func (cmd *macroFetchCommand) Command() *goimap.Command {
 	return &goimap.Command{
 		Name:      "FETCH",
-		Arguments: []interface{}{cmd.SeqSet, goimap.RawString(cmd.Item)},
+		Arguments: []any{cmd.SeqSet, goimap.RawString(cmd.Item)},
 	}
 }
 
@@ -853,7 +853,7 @@ func (bsv *bodyStructureValidator) check(tb testing.TB, structure *goimap.BodySt
 		require.Nil(tb, structure.Envelope)
 	}
 
-	require.Equal(tb, len(structure.Parts), len(bsv.validateParts))
+	require.Len(tb, bsv.validateParts, len(structure.Parts))
 
 	for i := 0; i < len(bsv.validateParts); i++ {
 		bsv.validateParts[i].check(tb, structure.Parts[i])
@@ -880,6 +880,17 @@ func newEmptyBodyStructureValidator() *bodyStructureValidator {
 		require.Empty(tb, s)
 	}
 
+	validEncoding := func(tb testing.TB, s string) {
+		validValues := []string{"7BIT", "8BIT", "BINARY", "BASE64", "QUOTED-PRINTABLE", ""}
+		tb.Helper()
+		for _, value := range validValues {
+			if strings.EqualFold(value, s) {
+				return
+			}
+		}
+		require.Failf(tb, "string not in allowed values", "got %q, want one of %v", s, validValues)
+	}
+
 	return &bodyStructureValidator{
 		validateMIMEType:    emptyString,
 		validateMimeSubType: emptyString,
@@ -888,7 +899,7 @@ func newEmptyBodyStructureValidator() *bodyStructureValidator {
 		},
 		validateID:          emptyString,
 		validateDescription: emptyString,
-		validateEncoding:    emptyString,
+		validateEncoding:    validEncoding,
 		validateSize: func(tb testing.TB, u uint32) {
 			require.Zero(tb, u)
 		},

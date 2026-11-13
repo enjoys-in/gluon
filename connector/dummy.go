@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -12,9 +13,8 @@ import (
 	"github.com/ProtonMail/gluon/constants"
 	"github.com/ProtonMail/gluon/imap"
 	"github.com/ProtonMail/gluon/internal/ticker"
-	"github.com/bradenaw/juniper/xslices"
+	"github.com/ProtonMail/gluon/pkg/utils"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/exp/slices"
 )
 
 var (
@@ -117,7 +117,7 @@ func (conn *Dummy) Init(_ context.Context, _ IMAPState) error {
 }
 
 func (conn *Dummy) Authorize(_ context.Context, username string, password []byte) bool {
-	if bytes.Compare(password, conn.password) != 0 {
+	if !bytes.Equal(password, conn.password) {
 		return false
 	}
 
@@ -441,7 +441,7 @@ func (conn *Dummy) validateUpdate(oldName, newName []string) error {
 }
 
 func removeMessageMailboxesUpdatedFromSlice(updates []imap.Update, messageID imap.MessageID) []imap.Update {
-	return xslices.Filter(updates, func(update imap.Update) bool {
+	return utils.Filter(updates, func(update imap.Update) bool {
 		u, ok := update.(*imap.MessageMailboxesUpdated)
 
 		return (!ok) || (u.MessageID != messageID)
@@ -449,7 +449,7 @@ func removeMessageMailboxesUpdatedFromSlice(updates []imap.Update, messageID ima
 }
 
 func removeMessageFlagsUpdatedFromSlice(updates []imap.Update, messageID imap.MessageID) []imap.Update {
-	return xslices.Filter(updates, func(update imap.Update) bool {
+	return utils.Filter(updates, func(update imap.Update) bool {
 		u, ok := update.(*imap.MessageFlagsUpdated)
 
 		return (!ok) || (u.MessageID != messageID)
@@ -457,7 +457,7 @@ func removeMessageFlagsUpdatedFromSlice(updates []imap.Update, messageID imap.Me
 }
 
 func removeMailboxUpdatedFromSlice(updates []imap.Update, mailboxID imap.MailboxID) []imap.Update {
-	return xslices.Filter(updates, func(update imap.Update) bool {
+	return utils.Filter(updates, func(update imap.Update) bool {
 		u, ok := update.(*imap.MailboxUpdated)
 
 		return (!ok) || (u.MailboxID != mailboxID)
@@ -472,11 +472,12 @@ func (conn *Dummy) validateName(name []string) (bool, error) {
 		exclusive = false
 
 	case len(conn.pfxFolder) > 0 && len(conn.pfxLabel) > 0:
-		if name[0] == conn.pfxFolder {
+		switch name[0] {
+		case conn.pfxFolder:
 			exclusive = true
-		} else if name[0] == conn.pfxLabel {
+		case conn.pfxLabel:
 			exclusive = false
-		} else {
+		default:
 			return false, ErrInvalidPrefix
 		}
 
