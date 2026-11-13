@@ -342,12 +342,25 @@ func (s *Session) remCapability(capability imap.Capability) {
 	}
 }
 
+func (s *Session) tlsActive() bool {
+	_, ok := s.conn.(*tls.Conn)
+	return ok
+}
+
+func (s *Session) advertised(caps []imap.Capability) []imap.Capability {
+	if !s.tlsActive() {
+		return caps
+	}
+
+	return slices.DeleteFunc(slices.Clone(caps), func(c imap.Capability) bool { return c == imap.StartTLS })
+}
+
 func (s *Session) greet() error {
 	s.capsLock.Lock()
 	defer s.capsLock.Unlock()
 
 	return response.Ok().
-		WithItems(response.ItemCapability(s.caps...)).
+		WithItems(response.ItemCapability(s.advertised(s.caps)...)).
 		WithMessage(fmt.Sprintf("%v %v - gluon session ID %v", s.version.Name, s.version.Version.String(), s.sessionID)).
 		Send(s)
 }

@@ -2,9 +2,11 @@ package session
 
 import (
 	"context"
+	"errors"
 
 	"github.com/ProtonMail/gluon/imap/command"
 	"github.com/ProtonMail/gluon/internal/response"
+	"github.com/ProtonMail/gluon/internal/state"
 	"github.com/ProtonMail/gluon/profiling"
 )
 
@@ -17,7 +19,8 @@ func (s *Session) handleSub(ctx context.Context, tag string, cmd *command.Subscr
 		return err
 	}
 
-	if err := s.state.Subscribe(ctx, nameUTF8); err != nil {
+	// Already subscribed is success: clients such as Thunderbird subscribe right after CREATE.
+	if err := s.state.Subscribe(ctx, nameUTF8); err != nil && !errors.Is(err, state.ErrAlreadySubscribed) {
 		return err
 	}
 

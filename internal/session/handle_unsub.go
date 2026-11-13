@@ -2,9 +2,11 @@ package session
 
 import (
 	"context"
+	"errors"
 
 	"github.com/ProtonMail/gluon/imap/command"
 	"github.com/ProtonMail/gluon/internal/response"
+	"github.com/ProtonMail/gluon/internal/state"
 	"github.com/ProtonMail/gluon/profiling"
 )
 
@@ -17,7 +19,7 @@ func (s *Session) handleUnsub(ctx context.Context, tag string, cmd *command.Unsu
 		return err
 	}
 
-	if err := s.state.Unsubscribe(ctx, nameUTF8); err != nil {
+	if err := s.state.Unsubscribe(ctx, nameUTF8); err != nil && !errors.Is(err, state.ErrAlreadyUnsubscribed) {
 		return err
 	}
 

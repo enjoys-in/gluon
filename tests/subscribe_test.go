@@ -20,6 +20,6 @@ func TestSubscribe(t *testing.T) {
 		c.OK("A004")
 
 		c.C("A005 SUBSCRIBE #news.comp.mail.mime")
-		c.S("A005 NO already subscribed to this mailbox")
+		c.OK("A005")
 	})
 }
