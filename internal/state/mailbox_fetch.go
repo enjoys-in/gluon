@@ -93,6 +93,10 @@ func (m *Mailbox) Fetch(ctx context.Context, cmd *command.Fetch, ch chan respons
 			operations = append(operations, fetchBody)
 		case *command.FetchAttributeBodyStructure:
 			operations = append(operations, fetchBodyStructure)
+		case *command.FetchAttributePreview:
+			needsLiteral = true
+
+			operations = append(operations, fetchPreview)
 		case *command.FetchAttributeBodySection:
 			needsLiteral = true
 			isBodyFetch = true
