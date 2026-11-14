@@ -82,6 +82,7 @@ type serverOptions struct {
 	uidValidityGenerator    imap.UIDValidityGenerator
 	database                db.ClientInterface
 	loggerIn, loggerOut     io.Writer
+	oauthLogin              bool
 }
 
 func (s *serverOptions) defaultUsername() string {
@@ -338,6 +339,10 @@ func runServer(tb testing.TB, options *serverOptions, tests func(session *testSe
 
 	if options.disableIMAPAuthenticate {
 		gluonOptions = append(gluonOptions, gluon.WithDisableIMAPAuthenticate())
+	}
+
+	if options.oauthLogin {
+		gluonOptions = append(gluonOptions, gluon.WithOAuthLogin())
 	}
 
 	// Create a new gluon server.

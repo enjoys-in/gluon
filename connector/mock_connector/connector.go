@@ -86,6 +86,20 @@ func (mr *MockConnectorMockRecorder) Close(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockConnector)(nil).Close), ctx)
 }
 
+// AuthorizeToken mocks base method.
+func (m *MockConnector) AuthorizeToken(ctx context.Context, username string, token []byte) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AuthorizeToken", ctx, username, token)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// AuthorizeToken indicates an expected call of AuthorizeToken.
+func (mr *MockConnectorMockRecorder) AuthorizeToken(ctx, username, token any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthorizeToken", reflect.TypeOf((*MockConnector)(nil).AuthorizeToken), ctx, username, token)
+}
+
 // CreateMailbox mocks base method.
 func (m *MockConnector) CreateMailbox(ctx context.Context, cache connector.IMAPStateWrite, name []string) (imap.Mailbox, error) {
 	m.ctrl.T.Helper()

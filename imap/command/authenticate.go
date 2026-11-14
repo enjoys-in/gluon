@@ -19,7 +19,9 @@ func (l Authenticate) SanitizedString() string {
 	return "AUTHENTICATE <AUTH_DATA>"
 }
 
-type AuthenticateCommandParser struct{}
+type AuthenticateCommandParser struct {
+	bearer bool
+}
 
 const (
 	messageClientAbortedAuthentication        = "client aborted authentication"
@@ -28,7 +30,7 @@ const (
 	messageInvalidAuthenticationData          = "invalid authentication data" //nolint:gosec
 )
 
-func (AuthenticateCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
+func (acp AuthenticateCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
 	// authenticate = "AUTHENTICATE" SP auth-type [SP (base64 / "=")] CRLF base64
 	// auth-type    = atom
 	// base64       = base64 encoded string
@@ -39,6 +41,11 @@ func (AuthenticateCommandParser) FromParser(p *rfcparser.Parser) (Payload, error
 	method, err := p.ParseAtom()
 	if err != nil {
 		return nil, err
+	}
+
+	// RFC 7628 OAUTHBEARER and XOAUTH2
+	if acp.bearer && isBearerMechanism(method) {
+		return parseAuthBearer(p, method)
 	}
 
 	if !strings.EqualFold(method, "plain") {

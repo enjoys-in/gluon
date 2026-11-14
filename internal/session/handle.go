@@ -59,7 +59,8 @@ func (s *Session) handleCommand(
 
 	case
 		*command.Login,
-		*command.Authenticate:
+		*command.Authenticate,
+		*command.AuthenticateBearer:
 		return s.handleNotAuthenticatedCommand(ctx, tag, cmd, ch)
 
 	case
@@ -144,6 +145,9 @@ func (s *Session) handleNotAuthenticatedCommand(
 		// 6.2.2 AUTHENTICATE Command we only support the PLAIN mechanism,
 		// it's similar to LOGIN, so we simply handle the command as login
 		return s.handleLogin(ctx, tag, (*command.Login)(cmd), ch)
+	case *command.AuthenticateBearer:
+		// RFC 7628 OAUTHBEARER and XOAUTH2
+		return s.handleAuthenticateBearer(ctx, tag, cmd, ch)
 	default:
 		return fmt.Errorf("bad command")
 	}

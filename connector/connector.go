@@ -29,6 +29,11 @@ type Connector interface {
 	// Authorize returns whether the given username/password combination are valid for this connector.
 	Authorize(ctx context.Context, username string, password []byte) bool
 
+	// AuthorizeToken returns whether the given OAuth 2.0 bearer token logs the given user in to this connector. The
+	// username is empty when the client leaves it to the token to name the user. It is only called on a server built
+	// with WithOAuthLogin; a connector without tokens returns false.
+	AuthorizeToken(ctx context.Context, username string, token []byte) bool
+
 	// CreateMailbox creates a mailbox with the given name.
 	CreateMailbox(ctx context.Context, cache IMAPStateWrite, name []string) (imap.Mailbox, error)
 

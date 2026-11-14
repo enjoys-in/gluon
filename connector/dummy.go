@@ -36,6 +36,9 @@ type Dummy struct {
 	// password holds the password that can be used for authorization.
 	password []byte
 
+	// bearerToken holds the OAuth 2.0 bearer token that can be used for authorization.
+	bearerToken []byte
+
 	// These hold the default flags/attributes given to mailboxes.
 	flags, permFlags, attrs imap.FlagSet
 

@@ -40,6 +40,10 @@ func (s *Session) startCommandReader(ctx context.Context) <-chan commandResult {
 			options = append(options, command.WithDisableIMAPAuthenticate())
 		}
 
+		if s.bearerAuthentication {
+			options = append(options, command.WithBearerAuthentication())
+		}
+
 		parser := command.NewParser(s.scanner, options...)
 
 		for {

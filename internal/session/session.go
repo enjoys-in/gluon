@@ -91,6 +91,9 @@ type Session struct {
 	// disableIMAPAuthenticate disables the IMAP AUTHENTICATE command (client can then only authenticate using LOGIN).
 	disableIMAPAuthenticate bool
 
+	// bearerAuthentication lets AUTHENTICATE accept an OAuth 2.0 bearer token (OAUTHBEARER and XOAUTH2).
+	bearerAuthentication bool
+
 	// panicHandler The panic handler.
 	panicHandler async.PanicHandler
 

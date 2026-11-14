@@ -14,6 +14,7 @@ type Builder interface {
 type parserBuilder struct {
 	continuationCallback    func(string) error
 	disableIMAPAuthenticate bool
+	bearerAuthentication    bool
 }
 
 type Option interface {
@@ -100,7 +101,7 @@ func NewParser(s *rfcparser.Scanner, options ...Option) *Parser {
 	}
 
 	if !builder.disableIMAPAuthenticate {
-		commands["authenticate"] = &AuthenticateCommandParser{}
+		commands["authenticate"] = &AuthenticateCommandParser{bearer: builder.bearerAuthentication}
 	}
 
 	return &Parser{

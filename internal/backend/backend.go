@@ -260,6 +260,10 @@ func (b *Backend) GetState(ctx context.Context, username string, password []byte
 		return nil, err
 	}
 
+	return b.newUserState(userID, username)
+}
+
+func (b *Backend) newUserState(userID, username string) (*state.State, error) {
 	state, err := b.users[userID].newState() //nolint:contextcheck
 	if err != nil {
 		return nil, err
@@ -312,13 +316,20 @@ func (b *Backend) Close(ctx context.Context) error {
 }
 
 func (b *Backend) getUserID(ctx context.Context, username string, password []byte) (string, error) {
+	return b.authorizeUser(func(conn connector.Connector) bool {
+		return conn.Authorize(ctx, username, password)
+	})
+}
+
+// authorizeUser returns the user whose connector accepts the login.
+func (b *Backend) authorizeUser(authorize func(connector.Connector) bool) (string, error) {
 	b.loginLock.Lock()
 	defer b.loginLock.Unlock()
 
 	b.loginWG.Wait()
 
 	for _, user := range b.users {
-		if user.connector.Authorize(ctx, username, password) {
+		if authorize(user.connector) {
 			atomic.StoreInt32(&b.loginErrorCount, 0)
 			return user.userID, nil
 		}
