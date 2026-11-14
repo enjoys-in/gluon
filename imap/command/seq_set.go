@@ -19,6 +19,10 @@ func (s SeqNum) String() string {
 		return "*"
 	}
 
+	if s.IsSearchResult() {
+		return "$"
+	}
+
 	return fmt.Sprintf("%v", int(s))
 }
 
@@ -87,6 +91,13 @@ func ParseSeqRange(p *rfcparser.Parser) (SeqRange, error) {
 
 func ParseSeqSet(p *rfcparser.Parser) ([]SeqRange, error) {
 	// sequence-set    = (seq-number / seq-range) *("," sequence-set)
+	// sequence-set    =/ "$" (RFC 5182)
+	if ok, err := p.Matches(rfcparser.TokenTypeDollar); err != nil {
+		return nil, err
+	} else if ok {
+		return []SeqRange{{Begin: SeqNumValueSearchResult, End: SeqNumValueSearchResult}}, nil
+	}
+
 	var result []SeqRange
 
 	{

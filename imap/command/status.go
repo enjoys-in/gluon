@@ -15,6 +15,8 @@ const (
 	StatusAttributeUIDNext
 	StatusAttributeUIDValidity
 	StatusAttributeUnseen
+	StatusAttributeSize
+	StatusAttributeMailboxID
 )
 
 func (s StatusAttribute) String() string {
@@ -29,6 +31,10 @@ func (s StatusAttribute) String() string {
 		return "UIDVALIDITY"
 	case StatusAttributeUnseen:
 		return "UNSEEN"
+	case StatusAttributeSize:
+		return "SIZE"
+	case StatusAttributeMailboxID:
+		return "MAILBOXID"
 	default:
 		return "UNKNOWN"
 	}
@@ -67,6 +73,19 @@ func (StatusCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
 		return nil, err
 	}
 
+	attributes, err := parseStatusAttributes(p)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Status{
+		Mailbox:    mailbox.Value,
+		Attributes: attributes,
+	}, nil
+}
+
+func parseStatusAttributes(p *rfcparser.Parser) ([]StatusAttribute, error) {
+	// "(" status-att *(SP status-att) ")"
 	if err := p.Consume(rfcparser.TokenTypeLParen, "expected ( for status attributes start"); err != nil {
 		return nil, err
 	}
@@ -103,15 +122,12 @@ func (StatusCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
 		return nil, err
 	}
 
-	return &Status{
-		Mailbox:    mailbox.Value,
-		Attributes: attributes,
-	}, nil
+	return attributes, nil
 }
 
 func parseStatusAttribute(p *rfcparser.Parser) (StatusAttribute, error) {
 	//status-att      = "MESSAGES" / "RECENT" / "UIDNEXT" / "UIDVALIDITY" /
-	//                   "UNSEEN"
+	//                   "UNSEEN" / "SIZE" / "MAILBOXID"
 	attribute, err := p.CollectBytesWhileMatches(rfcparser.TokenTypeChar)
 	if err != nil {
 		return 0, err
@@ -123,6 +139,10 @@ func parseStatusAttribute(p *rfcparser.Parser) (StatusAttribute, error) {
 		return StatusAttributeMessages, nil
 	case "recent":
 		return StatusAttributeRecent, nil
+	case "size":
+		return StatusAttributeSize, nil
+	case "mailboxid":
+		return StatusAttributeMailboxID, nil
 	case "uidnext":
 		return StatusAttributeUIDNext, nil
 	case "uidvalidity":

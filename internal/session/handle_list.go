@@ -15,6 +15,10 @@ func (s *Session) handleList(ctx context.Context, tag string, cmd *command.List,
 	profiling.Start(ctx, profiling.CmdTypeList)
 	defer profiling.Stop(ctx, profiling.CmdTypeList)
 
+	if cmd.Extended.Used {
+		return s.handleListExtended(ctx, tag, cmd, ch)
+	}
+
 	nameUTF8, err := s.decodeMailboxName(cmd.ListMailbox)
 	if err != nil {
 		return err

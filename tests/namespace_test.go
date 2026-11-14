@@ -77,10 +77,10 @@ func TestNamespaceNotAuthenticated(t *testing.T) {
 func TestNamespaceRejectsArguments(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t), func(c *testConnection, _ *testSession) {
 		c.C("A001 NAMESPACE INBOX")
-		c.Sx(`BAD .*expected CR`)
+		c.Sx(`^A001 BAD .*expected CR`)
 
 		c.C(`A002 NAMESPACE ""`)
-		c.Sx(`BAD .*expected CR`)
+		c.Sx(`^A002 BAD .*expected CR`)
 
 		c.C("A003 NAMESPACE")
 		c.S(`* NAMESPACE (("" "/")) NIL NIL`)
@@ -91,7 +91,7 @@ func TestNamespaceRejectsArguments(t *testing.T) {
 func TestNamespaceNotAdvertisedBeforeLogin(t *testing.T) {
 	runOneToOneTest(t, defaultServerOptions(t), func(c *testConnection, _ *testSession) {
 		c.C("A001 CAPABILITY")
-		c.S(`* CAPABILITY AUTH=PLAIN ID IDLE IMAP4rev1 STARTTLS`)
+		c.S(`* CAPABILITY AUTH=PLAIN ID IDLE IMAP4rev1 LITERAL+ SASL-IR STARTTLS`)
 		c.OK("A001")
 
 		c.C("A002 login user pass")

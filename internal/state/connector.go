@@ -4,8 +4,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/ProtonMail/gluon/connector"
 	"github.com/ProtonMail/gluon/db"
 	"github.com/ProtonMail/gluon/imap"
+	"github.com/ProtonMail/gluon/imap/command"
 )
 
 // Connector interface for State differs slightly from the connector.Connector interface as it needs the ability
@@ -27,11 +29,17 @@ type Connector interface {
 	// CreateMailbox creates a new mailbox with the given name.
 	CreateMailbox(ctx context.Context, tx db.Transaction, name []string) ([]Update, imap.Mailbox, error)
 
+	// CreateSpecialUseMailbox creates a new mailbox with the given name and special-use attributes.
+	CreateSpecialUseMailbox(ctx context.Context, tx db.Transaction, name []string, attributes imap.FlagSet) ([]Update, imap.Mailbox, error)
+
 	// UpdateMailbox sets the name of the mailbox with the given ID to the given new name.
 	UpdateMailbox(ctx context.Context, tx db.Transaction, mboxID imap.MailboxID, newName []string) ([]Update, error)
 
 	// DeleteMailbox deletes the mailbox with the given ID and name.
 	DeleteMailbox(ctx context.Context, tx db.Transaction, mboxID imap.MailboxID) ([]Update, error)
+
+	// SetMailboxSubscribed sets whether the mailbox with the given ID is subscribed.
+	SetMailboxSubscribed(ctx context.Context, tx db.Transaction, mboxID imap.MailboxID, subscribed bool) ([]Update, error)
 
 	// CreateMessage appends a message literal to the mailbox with the given ID.
 	CreateMessage(
@@ -42,6 +50,15 @@ type Connector interface {
 		flags imap.FlagSet,
 		date time.Time,
 	) ([]Update, imap.InternalMessageID, imap.Message, []byte, error)
+
+	// CreateMessages appends several message literals to the mailbox with the given ID. The connector creates all of
+	// them or none.
+	CreateMessages(
+		ctx context.Context,
+		tx db.Transaction,
+		mboxID imap.MailboxID,
+		messages []connector.MessageToCreate,
+	) ([]Update, []imap.InternalMessageID, []imap.Message, [][]byte, error)
 
 	// GetMessageLiteral retrieves the message literal from the connector.
 	// Note: this can get called from different go routines.
@@ -90,4 +107,11 @@ type Connector interface {
 	// GetQuotaRoot returns the list of quota root names applicable to the given mailbox,
 	// along with the resource usage for each of those roots.
 	GetQuotaRoot(ctx context.Context, mailboxName string) ([]string, []*imap.QuotaRoot, error)
+
+	// SetQuotaLimits changes limits of the quota root with the given name and returns the root as it is afterwards.
+	SetQuotaLimits(ctx context.Context, rootName string, limits []imap.QuotaLimit) (*imap.QuotaRoot, error)
+
+	// SearchMessages returns the messages in the mailbox that match every key, or false when the connector
+	// leaves the search to Gluon.
+	SearchMessages(ctx context.Context, mboxID imap.MailboxID, keys []command.SearchKey) ([]imap.MessageID, bool, error)
 }

@@ -34,7 +34,7 @@ func TestExistsUpdates(t *testing.T) {
 func TestExistsUpdatesInSeparateMailboxes(t *testing.T) {
 	runManyToOneTestWithAuth(t, defaultServerOptions(t), []int{1, 2}, func(c map[int]*testConnection, _ *testSession) {
 		c[1].C("A003 CREATE owatagusiam")
-		c[1].S("A003 OK CREATE")
+		c[1].Sx(`^A003 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		// First client selects in owatagusiam to ignore EXISTS updates from INBOX.
 		c[1].C("A006 select owatagusiam")

@@ -58,6 +58,9 @@ func (user *user) apply(ctx context.Context, update imap.Update) (err error) {
 	case *imap.MailboxUpdatedOrCreated:
 		return user.applyMailboxUpdatedOrCreated(ctx, update)
 
+	case *imap.MailboxSubscribed:
+		return user.applyMailboxSubscribed(ctx, update)
+
 	case *imap.MessagesCreated:
 		return user.applyMessagesCreated(ctx, update)
 

@@ -13,9 +13,9 @@ func TestDeleted(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t), func(c *testConnection, _ *testSession) {
 		// Create two mailboxes.
 		c.C("b001 CREATE mbox1")
-		c.S("b001 OK CREATE")
+		c.Sx(`^b001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 		c.C("b001 CREATE mbox2")
-		c.S("b001 OK CREATE")
+		c.Sx(`^b001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		// Create a message in mbox1.
 		c.doAppend(`mbox1`, buildRFC5322TestLiteral(`To: 1@pm.me`), `\Seen`).expect("OK")
@@ -81,9 +81,9 @@ func TestUIDDeleted(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t), func(c *testConnection, _ *testSession) {
 		// Create two mailboxes
 		c.C("b001 CREATE mbox1")
-		c.S("b001 OK CREATE")
+		c.Sx(`^b001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 		c.C("b001 CREATE mbox2")
-		c.S("b001 OK CREATE")
+		c.Sx(`^b001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		// Create a message in mbox1
 		c.doAppend(`mbox1`, buildRFC5322TestLiteral(`To: 1@pm.me`), `\Seen`).expect("OK")

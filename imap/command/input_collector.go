@@ -1,8 +1,13 @@
 package command
 
 import (
+	"io"
+	"slices"
+
 	"github.com/ProtonMail/gluon/rfcparser"
 )
+
+const maxRetainedInputSize = 64 * 1024
 
 type InputCollector struct {
 	source rfcparser.Reader
@@ -47,7 +52,24 @@ func (i *InputCollector) ReadBytes(delim byte) ([]byte, error) {
 	return b, err
 }
 
+func (i *InputCollector) Discard(n int) error {
+	_, err := io.CopyN(io.Discard, i.source, int64(n))
+
+	return err
+}
+
+func (i *InputCollector) Grow(n int) {
+	i.bytes = slices.Grow(i.bytes, n)
+}
+
 func (i *InputCollector) Reset() {
+	// A buffer that grew for a large literal is reused by the next large command and released by the next small one.
+	if cap(i.bytes) > maxRetainedInputSize && len(i.bytes) < cap(i.bytes)/4 {
+		i.bytes = make([]byte, 0, 128)
+
+		return
+	}
+
 	i.bytes = i.bytes[:0]
 }
 

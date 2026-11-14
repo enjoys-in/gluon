@@ -36,6 +36,9 @@ type Dummy struct {
 	// password holds the password that can be used for authorization.
 	password []byte
 
+	// bearerToken holds the OAuth 2.0 bearer token that can be used for authorization.
+	bearerToken []byte
+
 	// These hold the default flags/attributes given to mailboxes.
 	flags, permFlags, attrs imap.FlagSet
 
@@ -65,6 +68,9 @@ type Dummy struct {
 
 	// mailboxQuotaRoots maps mailbox names to their applicable quota root names.
 	mailboxQuotaRoots map[string][]string
+
+	// searchEnabled makes the connector answer searches itself instead of leaving them to Gluon.
+	searchEnabled bool
 }
 
 func NewDummy(usernames []string, password []byte, period time.Duration, flags, permFlags, attrs imap.FlagSet) *Dummy {

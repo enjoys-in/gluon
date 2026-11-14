@@ -113,6 +113,12 @@ func (c *onDiskStore) writeLiteral(out io.Writer, in io.Reader) error {
 		return fmt.Errorf("failed to set compressor options: %w", err)
 	}
 
+	if sized, ok := in.(interface{ Len() int }); ok {
+		if err := compressor.Apply(lz4.SizeOption(uint64(sized.Len()))); err != nil {
+			return fmt.Errorf("failed to set compressor options: %w", err)
+		}
+	}
+
 	go func(in io.Reader) {
 		_, err := compressor.ReadFrom(in)
 		_ = compressor.Close()
@@ -284,13 +290,22 @@ func (c *onDiskStore) Get(messageID imap.InternalMessageID) ([]byte, error) {
 
 	var b bytes.Buffer
 
-	b.Grow(int(fileSize))
+	b.Grow(literalSize(decompressor, fileSize))
 
 	if _, err := decompressor.WriteTo(&b); err != nil {
 		return nil, fmt.Errorf("failed to decompress block: %w", err)
 	}
 
 	return b.Bytes(), nil
+}
+
+// literalSize returns the size recorded when the literal was stored, or its size on disk when none was recorded.
+func literalSize(decompressor *lz4.Reader, fileSize int64) int {
+	if _, err := decompressor.Read(nil); err == nil && decompressor.Size() > 0 {
+		return decompressor.Size()
+	}
+
+	return int(fileSize)
 }
 
 func (c *onDiskStore) Delete(messageIDs ...imap.InternalMessageID) error {

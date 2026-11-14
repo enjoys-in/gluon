@@ -234,6 +234,18 @@ func WithDisableIMAPAuthenticate() Option {
 	return &withDisableIMAPAuthenticate{}
 }
 
+type withOAuthLogin struct{}
+
+func (withOAuthLogin) config(builder *serverBuilder) {
+	builder.oauthLogin = true
+}
+
+// WithOAuthLogin lets clients log in with an OAuth 2.0 bearer token, through the OAUTHBEARER and XOAUTH2 mechanisms
+// of AUTHENTICATE. The connector checks the token in AuthorizeToken.
+func WithOAuthLogin() Option {
+	return &withOAuthLogin{}
+}
+
 type withUIDValidityGenerator struct {
 	generator imap.UIDValidityGenerator
 }

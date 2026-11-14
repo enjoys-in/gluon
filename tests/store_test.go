@@ -15,7 +15,7 @@ import (
 func TestStore(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t), func(c *testConnection, _ *testSession) {
 		c.C("b001 CREATE saved-messages")
-		c.S("b001 OK CREATE")
+		c.Sx(`^b001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		c.doAppend(`saved-messages`, buildRFC5322TestLiteral(`To: 1@pm.me`), `\Seen`).expect("OK")
 		c.doAppend(`saved-messages`, buildRFC5322TestLiteral(`To: 2@pm.me`)).expect("OK")
@@ -65,7 +65,7 @@ func TestStoreForwarding(t *testing.T) {
 	// Ensure forwarding sets and removes all known forwarding flags.
 	runOneToOneTestWithAuth(t, defaultServerOptions(t), func(c *testConnection, _ *testSession) {
 		c.C("b001 CREATE saved-messages")
-		c.S("b001 OK CREATE")
+		c.Sx(`^b001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		c.doAppend(`saved-messages`, buildRFC5322TestLiteral(`To: 1@pm.me`)).expect("OK")
 		c.doAppend(`saved-messages`, buildRFC5322TestLiteral(`To: 2@pm.me`)).expect("OK")
@@ -136,7 +136,7 @@ func TestStoreForwarding(t *testing.T) {
 func TestSetStoreDeletedDoesNotCrash(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t), func(c *testConnection, _ *testSession) {
 		c.C("b001 CREATE saved-messages")
-		c.S("b001 OK CREATE")
+		c.Sx(`^b001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		c.doAppend(`saved-messages`, buildRFC5322TestLiteral(`To: 1@pm.me`)).expect("OK")
 
@@ -209,7 +209,7 @@ func TestStoreSilent(t *testing.T) {
 }
 
 func TestStoreReadUnread(t *testing.T) {
-	runManyToOneTestWithAuth(t, defaultServerOptions(t), []int{1, 2}, func(c map[int]*testConnection, _ *testSession) {
+	runManyToOneTestWithAuth(t, defaultServerOptions(t), []int{1, 2}, func(c map[int]*testConnection, s *testSession) {
 		c[1].C(`tag select inbox`).OK(`tag`)
 		c[2].C(`tag select inbox`).OK(`tag`)
 
@@ -219,6 +219,10 @@ func TestStoreReadUnread(t *testing.T) {
 			c[1].C(`tag noop`).OK(`tag`)
 			c[2].C(`tag noop`).OK(`tag`)
 		}
+
+		// The connector reports each appended message with the flags it had when it was created.
+		// Apply those updates now so that they cannot undo the flags stored below.
+		s.flush("user")
 
 		for i := 1; i <= 10; i++ {
 			// Begin IDLEing on session 2.
@@ -246,7 +250,7 @@ func TestStoreReadUnread(t *testing.T) {
 func TestUIDStore(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t), func(c *testConnection, _ *testSession) {
 		c.C("b001 CREATE saved-messages")
-		c.S("b001 OK CREATE")
+		c.Sx(`^b001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		c.doAppend(`saved-messages`, buildRFC5322TestLiteral(`To: 1@pm.me`), `\Seen`).expect("OK")
 		c.doAppend(`saved-messages`, buildRFC5322TestLiteral(`To: 2@pm.me`)).expect("OK")
@@ -349,7 +353,7 @@ func TestStoreFlagsPersistBetweenRuns(t *testing.T) {
 
 	runOneToOneTestWithAuth(t, options, func(c *testConnection, _ *testSession) {
 		c.C("b001 CREATE saved-messages")
-		c.S("b001 OK CREATE")
+		c.Sx(`^b001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 		c.doAppend(`saved-messages`, buildRFC5322TestLiteral(`To: 2@pm.me`)).expect("OK")
 	})
 

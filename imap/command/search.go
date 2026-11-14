@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -13,9 +14,20 @@ import (
 
 const maxSearchKeyDepth = 64
 
+type SearchReturnOption int
+
+const (
+	SearchReturnMin SearchReturnOption = iota
+	SearchReturnMax
+	SearchReturnAll
+	SearchReturnCount
+	SearchReturnSave
+)
+
 type Search struct {
 	Charset string
 	Keys    []SearchKey
+	Return  []SearchReturnOption
 }
 
 type SearchKey interface {
@@ -107,6 +119,10 @@ func (scp *SearchCommandParser) FromParser(p *rfcparser.Parser) (Payload, error)
 				Offset: firstChar.Offset,
 			}
 
+			if keywordStr.Value == "return" {
+				return scp.fromParserWithReturnOptions(p)
+			}
+
 			key, err := handleSearchKey(keywordStr, p, 0)
 			if err != nil {
 				return nil, err
@@ -148,6 +164,89 @@ func (scp *SearchCommandParser) FromParser(p *rfcparser.Parser) (Payload, error)
 	}, nil
 }
 
+func (scp *SearchCommandParser) fromParserWithReturnOptions(p *rfcparser.Parser) (Payload, error) {
+	//search          = "SEARCH" [SP "RETURN" SP "(" [search-return-opt *(SP search-return-opt)] ")"] SP search-program
+	offset := p.PreviousToken().Offset
+
+	opts, err := parseSearchReturnOptions(p)
+	if err != nil {
+		return nil, err
+	}
+
+	payload, err := scp.FromParser(p)
+	if err != nil {
+		return nil, err
+	}
+
+	search, ok := payload.(*Search)
+	if !ok || search.Return != nil {
+		return nil, p.MakeErrorAtOffset("unexpected RETURN in search program", offset)
+	}
+
+	search.Return = opts
+
+	return search, nil
+}
+
+func parseSearchReturnOptions(p *rfcparser.Parser) ([]SearchReturnOption, error) {
+	if err := p.Consume(rfcparser.TokenTypeSP, "expected space after RETURN"); err != nil {
+		return nil, err
+	}
+
+	if err := p.Consume(rfcparser.TokenTypeLParen, "expected ( for return options start"); err != nil {
+		return nil, err
+	}
+
+	var opts []SearchReturnOption
+
+	for first := true; !p.Check(rfcparser.TokenTypeRParen); first = false {
+		if !first {
+			if err := p.Consume(rfcparser.TokenTypeSP, "expected space between return options"); err != nil {
+				return nil, err
+			}
+		}
+
+		offset := p.CurrentToken().Offset
+
+		name, err := p.ParseAtom()
+		if err != nil {
+			return nil, err
+		}
+
+		var opt SearchReturnOption
+
+		switch strings.ToUpper(name) {
+		case "MIN":
+			opt = SearchReturnMin
+		case "MAX":
+			opt = SearchReturnMax
+		case "ALL":
+			opt = SearchReturnAll
+		case "COUNT":
+			opt = SearchReturnCount
+		case "SAVE":
+			opt = SearchReturnSave
+		default:
+			return nil, p.MakeErrorAtOffset(fmt.Sprintf("unknown search return option '%v'", name), offset)
+		}
+
+		if !slices.Contains(opts, opt) {
+			opts = append(opts, opt)
+		}
+	}
+
+	if err := p.Consume(rfcparser.TokenTypeRParen, "expected ) for return options end"); err != nil {
+		return nil, err
+	}
+
+	// RFC 4731: an empty list means ALL.
+	if len(opts) == 0 {
+		opts = []SearchReturnOption{SearchReturnAll}
+	}
+
+	return opts, nil
+}
+
 func parseSearchKey(p *rfcparser.Parser, depth int) (SearchKey, error) {
 	searchKeyDepthLimitDisabled := true
 
@@ -165,7 +264,7 @@ func parseSearchKey(p *rfcparser.Parser, depth int) (SearchKey, error) {
 		return parseSearchKeyList(p, depth)
 	}
 
-	if p.Check(rfcparser.TokenTypeDigit) || p.Check(rfcparser.TokenTypeAsterisk) {
+	if p.Check(rfcparser.TokenTypeDigit) || p.Check(rfcparser.TokenTypeAsterisk) || p.Check(rfcparser.TokenTypeDollar) {
 		seqSet, err := ParseSeqSet(p)
 		if err != nil {
 			return nil, err
@@ -403,6 +502,38 @@ func handleSearchKey(keyword rfcparser.String, p *rfcparser.Parser, depth int) (
 		}
 
 		return &SearchKeyLarger{Value: value}, nil
+
+	case "emailid":
+		value, err := parseSearchKeyObjectID(p)
+		if err != nil {
+			return nil, err
+		}
+
+		return &SearchKeyEmailID{Value: value}, nil
+
+	case "threadid":
+		value, err := parseSearchKeyObjectID(p)
+		if err != nil {
+			return nil, err
+		}
+
+		return &SearchKeyThreadID{Value: value}, nil
+
+	case "older":
+		value, err := parseSearchKeyInterval(p)
+		if err != nil {
+			return nil, err
+		}
+
+		return &SearchKeyOlder{Value: value}, nil
+
+	case "younger":
+		value, err := parseSearchKeyInterval(p)
+		if err != nil {
+			return nil, err
+		}
+
+		return &SearchKeyYounger{Value: value}, nil
 
 	case "not":
 		if err := p.Consume(rfcparser.TokenTypeSP, "expected space after NOT"); err != nil {

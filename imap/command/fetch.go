@@ -72,6 +72,14 @@ func (FetchCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
 				return nil, err
 			}
 
+			if ok, err := p.Matches(rfcparser.TokenTypeSP); err != nil {
+				return nil, err
+			} else if ok {
+				if err := parseFetchAttributeModifiers(p, attr); err != nil {
+					return nil, err
+				}
+			}
+
 			attributes = []FetchAttribute{attr}
 		}
 	}
@@ -111,6 +119,14 @@ func parseFetchAttributes(p *rfcparser.Parser) ([]FetchAttribute, error) {
 			return nil, err
 		} else if !ok {
 			break
+		}
+
+		if p.Check(rfcparser.TokenTypeLParen) {
+			if err := parseFetchAttributeModifiers(p, attributes[len(attributes)-1]); err != nil {
+				return nil, err
+			}
+
+			continue
 		}
 
 		attribute, err := parseFetchAttribute(p)
@@ -161,6 +177,12 @@ func handleFetchAttribute(name rfcparser.String, p *rfcparser.Parser) (FetchAttr
 		return &FetchAttributeBodyStructure{}, nil
 	case "uid":
 		return &FetchAttributeUID{}, nil
+	case "preview":
+		return &FetchAttributePreview{}, nil
+	case "emailid":
+		return &FetchAttributeEmailID{}, nil
+	case "threadid":
+		return &FetchAttributeThreadID{}, nil
 	case "rfc":
 		return handleRFC822FetchAttribute(p)
 	case "body":

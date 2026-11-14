@@ -16,6 +16,7 @@ import (
 
 	connector "github.com/ProtonMail/gluon/connector"
 	imap "github.com/ProtonMail/gluon/imap"
+	command "github.com/ProtonMail/gluon/imap/command"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -85,6 +86,20 @@ func (mr *MockConnectorMockRecorder) Close(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockConnector)(nil).Close), ctx)
 }
 
+// AuthorizeToken mocks base method.
+func (m *MockConnector) AuthorizeToken(ctx context.Context, username string, token []byte) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AuthorizeToken", ctx, username, token)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// AuthorizeToken indicates an expected call of AuthorizeToken.
+func (mr *MockConnectorMockRecorder) AuthorizeToken(ctx, username, token any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthorizeToken", reflect.TypeOf((*MockConnector)(nil).AuthorizeToken), ctx, username, token)
+}
+
 // CreateMailbox mocks base method.
 func (m *MockConnector) CreateMailbox(ctx context.Context, cache connector.IMAPStateWrite, name []string) (imap.Mailbox, error) {
 	m.ctrl.T.Helper()
@@ -114,6 +129,22 @@ func (m *MockConnector) CreateMessage(ctx context.Context, cache connector.IMAPS
 func (mr *MockConnectorMockRecorder) CreateMessage(ctx, cache, mboxID, literal, flags, date any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMessage", reflect.TypeOf((*MockConnector)(nil).CreateMessage), ctx, cache, mboxID, literal, flags, date)
+}
+
+// CreateMessages mocks base method.
+func (m *MockConnector) CreateMessages(ctx context.Context, cache connector.IMAPStateWrite, mboxID imap.MailboxID, messages []connector.MessageToCreate) ([]imap.Message, [][]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateMessages", ctx, cache, mboxID, messages)
+	ret0, _ := ret[0].([]imap.Message)
+	ret1, _ := ret[1].([][]byte)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// CreateMessages indicates an expected call of CreateMessages.
+func (mr *MockConnectorMockRecorder) CreateMessages(ctx, cache, mboxID, messages any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMessages", reflect.TypeOf((*MockConnector)(nil).CreateMessages), ctx, cache, mboxID, messages)
 }
 
 // DeleteMailbox mocks base method.
@@ -159,6 +190,66 @@ func (m *MockConnector) GetQuotaRoot(arg0 context.Context, arg1 string) ([]strin
 func (mr *MockConnectorMockRecorder) GetQuotaRoot(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetQuotaRoot", reflect.TypeOf((*MockConnector)(nil).GetQuotaRoot), arg0, arg1)
+}
+
+// CreateSpecialUseMailbox mocks base method.
+func (m *MockConnector) CreateSpecialUseMailbox(ctx context.Context, cache connector.IMAPStateWrite, name []string, attributes imap.FlagSet) (imap.Mailbox, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateSpecialUseMailbox", ctx, cache, name, attributes)
+	ret0, _ := ret[0].(imap.Mailbox)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateSpecialUseMailbox indicates an expected call of CreateSpecialUseMailbox.
+func (mr *MockConnectorMockRecorder) CreateSpecialUseMailbox(ctx, cache, name, attributes any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSpecialUseMailbox", reflect.TypeOf((*MockConnector)(nil).CreateSpecialUseMailbox), ctx, cache, name, attributes)
+}
+
+// SetQuotaLimits mocks base method.
+func (m *MockConnector) SetQuotaLimits(ctx context.Context, rootName string, limits []imap.QuotaLimit) (*imap.QuotaRoot, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetQuotaLimits", ctx, rootName, limits)
+	ret0, _ := ret[0].(*imap.QuotaRoot)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SetQuotaLimits indicates an expected call of SetQuotaLimits.
+func (mr *MockConnectorMockRecorder) SetQuotaLimits(ctx, rootName, limits any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetQuotaLimits", reflect.TypeOf((*MockConnector)(nil).SetQuotaLimits), ctx, rootName, limits)
+}
+
+// SetMailboxSubscribed mocks base method.
+func (m *MockConnector) SetMailboxSubscribed(ctx context.Context, cache connector.IMAPStateWrite, mboxID imap.MailboxID, subscribed bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetMailboxSubscribed", ctx, cache, mboxID, subscribed)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetMailboxSubscribed indicates an expected call of SetMailboxSubscribed.
+func (mr *MockConnectorMockRecorder) SetMailboxSubscribed(ctx, cache, mboxID, subscribed any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetMailboxSubscribed", reflect.TypeOf((*MockConnector)(nil).SetMailboxSubscribed), ctx, cache, mboxID, subscribed)
+}
+
+// SearchMessages mocks base method.
+func (m *MockConnector) SearchMessages(ctx context.Context, mboxID imap.MailboxID, keys []command.SearchKey) ([]imap.MessageID, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SearchMessages", ctx, mboxID, keys)
+	ret0, _ := ret[0].([]imap.MessageID)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// SearchMessages indicates an expected call of SearchMessages.
+func (mr *MockConnectorMockRecorder) SearchMessages(ctx, mboxID, keys any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchMessages", reflect.TypeOf((*MockConnector)(nil).SearchMessages), ctx, mboxID, keys)
 }
 
 // GetMailboxVisibility mocks base method.

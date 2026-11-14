@@ -41,6 +41,7 @@ func (s *Session) handleExamine(ctx context.Context, tag string, cmd *command.Ex
 		ch <- response.Ok().WithItems(response.ItemPermanentFlags(permFlags))
 		ch <- response.Ok().WithItems(response.ItemUIDNext(uidNext))
 		ch <- response.Ok().WithItems(response.ItemUIDValidity(mailbox.UIDValidity()))
+		ch <- response.Ok().WithItems(response.ItemMailboxID(mailbox.ObjectID()))
 
 		if unseen, ok := mailbox.GetFirstMessageWithoutFlag(imap.FlagSeen); ok {
 			ch <- response.Ok().WithItems(response.ItemUnseen(uint32(unseen.Seq)))

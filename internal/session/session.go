@@ -91,6 +91,9 @@ type Session struct {
 	// disableIMAPAuthenticate disables the IMAP AUTHENTICATE command (client can then only authenticate using LOGIN).
 	disableIMAPAuthenticate bool
 
+	// bearerAuthentication lets AUTHENTICATE accept an OAuth 2.0 bearer token (OAUTHBEARER and XOAUTH2).
+	bearerAuthentication bool
+
 	// panicHandler The panic handler.
 	panicHandler async.PanicHandler
 
@@ -117,14 +120,14 @@ func New(
 	inputCollector := command.NewInputCollector(bufio.NewReader(conn))
 	scanner := rfcparser.NewScannerWithReader(inputCollector)
 
-	caps := []imap.Capability{imap.IMAP4rev1, imap.UNSELECT, imap.UIDPLUS, imap.MOVE, imap.ID, imap.QUOTA, imap.SORT, imap.ThreadReferences, imap.NAMESPACE}
+	caps := []imap.Capability{imap.IMAP4rev1, imap.UNSELECT, imap.UIDPLUS, imap.MOVE, imap.ID, imap.QUOTA, imap.SORT, imap.ThreadReferences, imap.NAMESPACE, imap.CHILDREN, imap.SpecialUse, imap.ListExtended, imap.ListStatus, imap.ESEARCH, imap.LiteralPlus, imap.UNAUTHENTICATE, imap.StatusSize, imap.WITHIN, imap.ESORT, imap.SortDisplay, imap.SEARCHRES, imap.CreateSpecialUse, imap.MULTIAPPEND, imap.UIDBatches, imap.PREVIEW, imap.OBJECTID, imap.QUOTASET}
 
 	if !featureFlagProvider.GetFlagValue(unleash.CapabilityKillSwitchMap[string(imap.IDLE)]) {
 		caps = append(caps, imap.IDLE)
 	}
 
 	if !disableIMAPAuthenticate {
-		caps = append(caps, imap.AUTHPLAIN)
+		caps = append(caps, imap.AUTHPLAIN, imap.SASLIR)
 	}
 
 	return &Session{
@@ -291,12 +294,12 @@ func (s *Session) WriteResponse(res string) error {
 	return nil
 }
 
-func (s *Session) logIncoming(line string) {
+func (s *Session) logIncoming(line []byte) {
 	if s.inLogger == nil {
 		return
 	}
 
-	writeLog(s.inLogger, "C", strconv.Itoa(s.sessionID), line)
+	writeLogBytes(s.inLogger, "C", strconv.Itoa(s.sessionID), line)
 }
 
 func (s *Session) logOutgoing(line string) {

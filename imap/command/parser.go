@@ -14,6 +14,7 @@ type Builder interface {
 type parserBuilder struct {
 	continuationCallback    func(string) error
 	disableIMAPAuthenticate bool
+	bearerAuthentication    bool
 }
 
 type Option interface {
@@ -93,10 +94,14 @@ func NewParser(s *rfcparser.Scanner, options ...Option) *Parser {
 		"sort":         &SortCommandParser{},
 		"thread":       &ThreadCommandParser{},
 		"namespace":    &NamespaceCommandParser{},
+
+		"unauthenticate": &UnauthenticateCommandParser{},
+		"uidbatches":     &UIDBatchesCommandParser{},
+		"setquota":       &SetQuotaCommandParser{},
 	}
 
 	if !builder.disableIMAPAuthenticate {
-		commands["authenticate"] = &AuthenticateCommandParser{}
+		commands["authenticate"] = &AuthenticateCommandParser{bearer: builder.bearerAuthentication}
 	}
 
 	return &Parser{
@@ -116,9 +121,69 @@ func (p *Parser) LastParsedCommand() string {
 
 // ConsumeInvalidInput will consume all remaining scanner input until a new line has been reached.
 func (p *Parser) ConsumeInvalidInput() error {
-	_, err := p.scanner.ConsumeUntilNewLine()
+	rest, err := p.scanner.ConsumeUntilNewLine()
+	if err != nil {
+		return err
+	}
 
-	return err
+	// The scanner reads one byte ahead, so the current token is the byte before the rest of the line.
+	lookahead := p.parser.CurrentToken().Value
+
+	// The data of a non-synchronizing literal (RFC 7888) is already on the wire and has to be discarded too.
+	for {
+		size, ok := nonSynchronizingLiteralSize(lookahead, rest)
+		if !ok {
+			return nil
+		}
+
+		if size >= rfcparser.MaxLiteralSize {
+			return fmt.Errorf("literal size exceeds maximum size of 70MB")
+		}
+
+		if err := p.scanner.Discard(size); err != nil {
+			return err
+		}
+
+		if rest, err = p.scanner.ConsumeUntilNewLine(); err != nil {
+			return err
+		}
+
+		lookahead = 0
+	}
+}
+
+// nonSynchronizingLiteralSize reads the size of a "{n+}" marker that ends the line.
+func nonSynchronizingLiteralSize(lookahead byte, rest []byte) (int, bool) {
+	i := len(rest) - 1
+
+	for _, want := range [...]byte{'\n', '\r', '}', '+'} {
+		if i < 0 || rest[i] != want {
+			return 0, false
+		}
+
+		i--
+	}
+
+	size, digits := 0, 0
+
+	for scale := 1; i >= 0 && rest[i] >= '0' && rest[i] <= '9'; i, scale = i-1, scale*10 {
+		if digits++; digits > 9 {
+			return rfcparser.MaxLiteralSize, true
+		}
+
+		size += int(rest[i]-'0') * scale
+	}
+
+	opening := lookahead
+	if i >= 0 {
+		opening = rest[i]
+	}
+
+	if digits == 0 || opening != '{' {
+		return 0, false
+	}
+
+	return size, true
 }
 
 func (p *Parser) Parse() (Command, error) {
@@ -159,13 +224,13 @@ func (p *Parser) Parse() (Command, error) {
 	}
 
 	if err := p.parser.Consume(rfcparser.TokenTypeCR, "expected CR"); err != nil {
-		return Command{}, err
+		return Command{Tag: result.Tag}, err
 	}
 
 	// Can't fully consume the last new line here or we will hang forever as the clients don't send the next token.
 	// In the next loop, the call to advance will ensure the next token in the stream gets loaded properly.
 	if !p.parser.Check(rfcparser.TokenTypeLF) {
-		return Command{}, p.parser.MakeError("expected LF after CR")
+		return Command{Tag: result.Tag}, p.parser.MakeError("expected LF after CR")
 	}
 
 	return result, nil

@@ -3,7 +3,6 @@ package session
 import (
 	"context"
 
-	"github.com/ProtonMail/gluon/imap"
 	"github.com/ProtonMail/gluon/imap/command"
 	"github.com/ProtonMail/gluon/internal/response"
 	"github.com/ProtonMail/gluon/internal/state"
@@ -19,47 +18,71 @@ func (s *Session) handleStatus(ctx context.Context, tag string, cmd *command.Sta
 		return err
 	}
 
-	if err := s.state.Mailbox(ctx, nameUTF8, func(mailbox *state.Mailbox) error {
-		if mailbox.Selected() {
-			if err := flush(ctx, mailbox, true, ch); err != nil {
-				return err
-			}
-		}
-
-		var items []response.Item
-
-		for _, att := range cmd.Attributes {
-			switch att {
-			case command.StatusAttributeMessages:
-				items = append(items, response.ItemMessages(mailbox.Count()))
-
-			case command.StatusAttributeRecent:
-				items = append(items, response.ItemRecent(mailbox.GetMessagesWithFlagCount(imap.FlagRecent)))
-
-			case command.StatusAttributeUIDNext:
-				uidNext, err := mailbox.UIDNext(ctx)
-				if err != nil {
-					return err
-				}
-
-				items = append(items, response.ItemUIDNext(uidNext))
-
-			case command.StatusAttributeUIDValidity:
-				items = append(items, response.ItemUIDValidity(mailbox.UIDValidity()))
-
-			case command.StatusAttributeUnseen:
-				items = append(items, response.ItemUnseen(uint32(mailbox.GetMessagesWithoutFlagCount(imap.FlagSeen))))
-			}
-		}
-
-		ch <- response.Status().WithMailbox(cmd.Mailbox).WithItems(items...)
-
-		return nil
-	}); err != nil {
+	items, err := s.statusItems(ctx, nameUTF8, cmd.Attributes, ch)
+	if err != nil {
 		return err
 	}
+
+	ch <- response.Status().WithMailbox(cmd.Mailbox).WithItems(items...)
 
 	ch <- response.Ok(tag).WithMessage("STATUS")
 
 	return nil
+}
+
+func (s *Session) statusItems(
+	ctx context.Context,
+	nameUTF8 string,
+	attributes []command.StatusAttribute,
+	ch chan response.Response,
+) ([]response.Item, error) {
+	status, ok, err := s.state.MailboxStatus(ctx, nameUTF8, attributes)
+	if err != nil {
+		return nil, err
+	}
+
+	if !ok {
+		if err := s.state.Mailbox(ctx, nameUTF8, func(mailbox *state.Mailbox) error {
+			if mailbox.Selected() {
+				if err := flush(ctx, mailbox, true, ch); err != nil {
+					return err
+				}
+			}
+
+			status, err = mailbox.Status(ctx, attributes)
+
+			return err
+		}); err != nil {
+			return nil, err
+		}
+	}
+
+	items := make([]response.Item, 0, len(attributes))
+
+	for _, att := range attributes {
+		switch att {
+		case command.StatusAttributeMessages:
+			items = append(items, response.ItemMessages(status.Messages))
+
+		case command.StatusAttributeRecent:
+			items = append(items, response.ItemRecent(status.Recent))
+
+		case command.StatusAttributeUIDNext:
+			items = append(items, response.ItemUIDNext(status.UIDNext))
+
+		case command.StatusAttributeUIDValidity:
+			items = append(items, response.ItemUIDValidity(status.UIDValidity))
+
+		case command.StatusAttributeUnseen:
+			items = append(items, response.ItemUnseen(uint32(status.Unseen)))
+
+		case command.StatusAttributeSize:
+			items = append(items, response.ItemSize(status.Size))
+
+		case command.StatusAttributeMailboxID:
+			items = append(items, response.ItemMailboxID(status.MailboxID))
+		}
+	}
+
+	return items, nil
 }
