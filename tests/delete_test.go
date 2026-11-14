@@ -105,7 +105,7 @@ func TestDeleteCannotDeleteMissingMailbox(t *testing.T) {
 func TestDeleteSelectedMailboxCausesDisconnect(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t), func(c *testConnection, _ *testSession) {
 		c.C("b001 CREATE mbox1")
-		c.S("b001 OK CREATE")
+		c.Sx(`^b001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		c.C("b002 SELECT mbox1").OK("b002")
 		c.C("b003 DELETE mbox1").OK("b003")
@@ -116,7 +116,7 @@ func TestDeleteSelectedMailboxCausesDisconnect(t *testing.T) {
 func TestDeleteExaminedMailboxCausesDisconnect(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t), func(c *testConnection, _ *testSession) {
 		c.C("b001 CREATE mbox1")
-		c.S("b001 OK CREATE")
+		c.Sx(`^b001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		c.C("b002 EXAMINE mbox1").OK("b002")
 		c.C("b003 DELETE mbox1").OK("b003")
@@ -127,7 +127,7 @@ func TestDeleteExaminedMailboxCausesDisconnect(t *testing.T) {
 func TestDeleteSelectedMailboxCausesDisconnectOnOtherClients(t *testing.T) {
 	runManyToOneTestWithAuth(t, defaultServerOptions(t), []int{1, 2}, func(c map[int]*testConnection, s *testSession) {
 		c[1].C("b001 CREATE mbox1")
-		c[1].S("b001 OK CREATE")
+		c[1].Sx(`^b001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		s.flush("user")
 
@@ -147,7 +147,7 @@ func TestDeleteSelectedMailboxCausesDisconnectOnOtherClients(t *testing.T) {
 func TestDeleteExaminedMailboxCausesDisconnectOnOtherClients(t *testing.T) {
 	runManyToOneTestWithAuth(t, defaultServerOptions(t), []int{1, 2}, func(c map[int]*testConnection, s *testSession) {
 		c[1].C("b001 CREATE mbox1")
-		c[1].S("b001 OK CREATE")
+		c[1].Sx(`^b001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		s.flush("user")
 

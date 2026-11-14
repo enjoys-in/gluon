@@ -16,6 +16,7 @@ const (
 	StatusAttributeUIDValidity
 	StatusAttributeUnseen
 	StatusAttributeSize
+	StatusAttributeMailboxID
 )
 
 func (s StatusAttribute) String() string {
@@ -32,6 +33,8 @@ func (s StatusAttribute) String() string {
 		return "UNSEEN"
 	case StatusAttributeSize:
 		return "SIZE"
+	case StatusAttributeMailboxID:
+		return "MAILBOXID"
 	default:
 		return "UNKNOWN"
 	}
@@ -124,7 +127,7 @@ func parseStatusAttributes(p *rfcparser.Parser) ([]StatusAttribute, error) {
 
 func parseStatusAttribute(p *rfcparser.Parser) (StatusAttribute, error) {
 	//status-att      = "MESSAGES" / "RECENT" / "UIDNEXT" / "UIDVALIDITY" /
-	//                   "UNSEEN" / "SIZE"
+	//                   "UNSEEN" / "SIZE" / "MAILBOXID"
 	attribute, err := p.CollectBytesWhileMatches(rfcparser.TokenTypeChar)
 	if err != nil {
 		return 0, err
@@ -138,6 +141,8 @@ func parseStatusAttribute(p *rfcparser.Parser) (StatusAttribute, error) {
 		return StatusAttributeRecent, nil
 	case "size":
 		return StatusAttributeSize, nil
+	case "mailboxid":
+		return StatusAttributeMailboxID, nil
 	case "uidnext":
 		return StatusAttributeUIDNext, nil
 	case "uidvalidity":

@@ -17,6 +17,7 @@ type MailboxStatus struct {
 	UIDNext     imap.UID
 	UIDValidity imap.UID
 	Size        int
+	MailboxID   string
 }
 
 // MailboxStatus counts with queries instead of loading the mailbox's messages. It returns false for the selected
@@ -37,7 +38,7 @@ func (state *State) MailboxStatus(ctx context.Context, name string, attributes [
 			return result{}, nil
 		}
 
-		status := MailboxStatus{UIDValidity: mbox.UIDValidity}
+		status := MailboxStatus{UIDValidity: mbox.UIDValidity, MailboxID: mailboxObjectID(db.NewMailboxIDPair(mbox))}
 
 		for _, attribute := range attributes {
 			switch attribute {
@@ -86,6 +87,7 @@ func (m *Mailbox) Status(ctx context.Context, attributes []command.StatusAttribu
 		Unseen:      m.GetMessagesWithoutFlagCount(imap.FlagSeen),
 		UIDNext:     uidNext,
 		UIDValidity: m.UIDValidity(),
+		MailboxID:   m.ObjectID(),
 	}
 
 	if slices.Contains(attributes, command.StatusAttributeSize) {

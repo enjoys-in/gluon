@@ -7,7 +7,7 @@ import (
 func TestUnsubscribe(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t, withDelimiter(".")), func(c *testConnection, _ *testSession) {
 		c.C("A002 CREATE #news.comp.mail.mime")
-		c.S("A002 OK CREATE")
+		c.Sx(`^A002 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		c.C("A003 UNSUBSCRIBE #this.name.does.not.exist")
 		c.S("A003 NO no such mailbox")
@@ -23,7 +23,7 @@ func TestUnsubscribe(t *testing.T) {
 func TestUnsubscribeAfterMailboxDeleted(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t, withDelimiter(".")), func(c *testConnection, _ *testSession) {
 		c.C("A002 CREATE #news.comp.mail.mime")
-		c.S("A002 OK CREATE")
+		c.Sx(`^A002 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		c.C("A006 DELETE #news.comp.mail.mime")
 		c.S("A006 OK DELETE")
@@ -39,7 +39,7 @@ func TestUnsubscribeAfterMailboxDeleted(t *testing.T) {
 func TestUnsubscribeAfterMailboxRenamedDeleted(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t, withDelimiter(".")), func(c *testConnection, _ *testSession) {
 		c.C("A002 CREATE mailbox")
-		c.S("A002 OK CREATE")
+		c.Sx(`^A002 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		c.C("A002 RENAME mailbox mailbox2")
 		c.S("A002 OK RENAME")

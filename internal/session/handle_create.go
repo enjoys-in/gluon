@@ -40,7 +40,14 @@ func (s *Session) handleCreate(ctx context.Context, tag string, cmd *command.Cre
 		return err
 	}
 
-	ch <- response.Ok(tag).WithMessage("CREATE")
+	res := response.Ok(tag).WithMessage("CREATE")
+
+	// RFC 8474 OBJECTID Extension
+	if mailboxID, err := s.state.MailboxObjectID(ctx, nameUTF8); err == nil {
+		res = res.WithItems(response.ItemMailboxID(mailboxID))
+	}
+
+	ch <- res
 
 	return nil
 }

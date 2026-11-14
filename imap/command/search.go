@@ -503,6 +503,22 @@ func handleSearchKey(keyword rfcparser.String, p *rfcparser.Parser, depth int) (
 
 		return &SearchKeyLarger{Value: value}, nil
 
+	case "emailid":
+		value, err := parseSearchKeyObjectID(p)
+		if err != nil {
+			return nil, err
+		}
+
+		return &SearchKeyEmailID{Value: value}, nil
+
+	case "threadid":
+		value, err := parseSearchKeyObjectID(p)
+		if err != nil {
+			return nil, err
+		}
+
+		return &SearchKeyThreadID{Value: value}, nil
+
 	case "older":
 		value, err := parseSearchKeyInterval(p)
 		if err != nil {

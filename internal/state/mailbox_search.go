@@ -247,6 +247,12 @@ func buildSearchOp(m *Mailbox, key command.SearchKey, decoder *encoding.Decoder)
 	case *command.SearchKeyLarger:
 		return buildSearchOpLarger(key)
 
+	case *command.SearchKeyEmailID:
+		return buildSearchOpEmailID(key)
+
+	case *command.SearchKeyThreadID:
+		return buildSearchOpThreadID()
+
 	case *command.SearchKeyOlder:
 		return buildSearchOpOlder(key)
 

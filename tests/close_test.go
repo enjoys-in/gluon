@@ -16,7 +16,7 @@ func TestClose(t *testing.T) {
 	// There is currently no way to check for this with the go imap client.
 	runManyToOneTestWithAuth(t, defaultServerOptions(t), []int{1, 2}, func(c map[int]*testConnection, s *testSession) {
 		c[1].C("b001 CREATE saved-messages")
-		c[1].S("b001 OK CREATE")
+		c[1].Sx(`^b001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		c[1].doAppend(`saved-messages`, buildRFC5322TestLiteral(`To: 1@pm.me`), `\Seen`).expect("OK")
 		c[1].doAppend(`saved-messages`, buildRFC5322TestLiteral(`To: 2@pm.me`)).expect("OK")

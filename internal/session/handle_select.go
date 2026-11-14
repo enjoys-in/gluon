@@ -42,6 +42,7 @@ func (s *Session) handleSelect(ctx context.Context, tag string, cmd *command.Sel
 		ch <- response.Ok().WithItems(response.ItemPermanentFlags(permFlags)).WithMessage("Flags permitted")
 		ch <- response.Ok().WithItems(response.ItemUIDNext(uidNext)).WithMessage("Predicted next UID")
 		ch <- response.Ok().WithItems(response.ItemUIDValidity(mailbox.UIDValidity())).WithMessage("UIDs valid")
+		ch <- response.Ok().WithItems(response.ItemMailboxID(mailbox.ObjectID())).WithMessage("Mailbox ID")
 
 		if unseen, ok := mailbox.GetFirstMessageWithoutFlag(imap.FlagSeen); ok {
 			ch <- response.Ok().WithItems(response.ItemUnseen(uint32(unseen.Seq))).WithMessage("Unseen messages")

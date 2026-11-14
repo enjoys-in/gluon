@@ -78,6 +78,9 @@ func (s *Session) statusItems(
 
 		case command.StatusAttributeSize:
 			items = append(items, response.ItemSize(status.Size))
+
+		case command.StatusAttributeMailboxID:
+			items = append(items, response.ItemMailboxID(status.MailboxID))
 		}
 	}
 
