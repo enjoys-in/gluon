@@ -295,6 +295,12 @@ func (sc *stateConnectorImpl) GetQuotaRoot(ctx context.Context, mailboxName stri
 	return sc.connector.GetQuotaRoot(ctx, mailboxName)
 }
 
+func (sc *stateConnectorImpl) SetQuotaLimits(ctx context.Context, rootName string, limits []imap.QuotaLimit) (*imap.QuotaRoot, error) {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	return sc.connector.SetQuotaLimits(ctx, rootName, limits)
+}
+
 func (sc *stateConnectorImpl) SearchMessages(ctx context.Context, mboxID imap.MailboxID, keys []command.SearchKey) ([]imap.MessageID, bool, error) {
 	ctx = sc.newContextWithMetadata(ctx)
 

@@ -108,6 +108,9 @@ type Connector interface {
 	// along with the resource usage for each of those roots.
 	GetQuotaRoot(ctx context.Context, mailboxName string) ([]string, []*imap.QuotaRoot, error)
 
+	// SetQuotaLimits changes limits of the quota root with the given name and returns the root as it is afterwards.
+	SetQuotaLimits(ctx context.Context, rootName string, limits []imap.QuotaLimit) (*imap.QuotaRoot, error)
+
 	// SearchMessages returns the messages in the mailbox that match every key, or false when the connector
 	// leaves the search to Gluon.
 	SearchMessages(ctx context.Context, mboxID imap.MailboxID, keys []command.SearchKey) ([]imap.MessageID, bool, error)

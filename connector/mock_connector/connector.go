@@ -193,6 +193,21 @@ func (mr *MockConnectorMockRecorder) CreateSpecialUseMailbox(ctx, cache, name, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSpecialUseMailbox", reflect.TypeOf((*MockConnector)(nil).CreateSpecialUseMailbox), ctx, cache, name, attributes)
 }
 
+// SetQuotaLimits mocks base method.
+func (m *MockConnector) SetQuotaLimits(ctx context.Context, rootName string, limits []imap.QuotaLimit) (*imap.QuotaRoot, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetQuotaLimits", ctx, rootName, limits)
+	ret0, _ := ret[0].(*imap.QuotaRoot)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SetQuotaLimits indicates an expected call of SetQuotaLimits.
+func (mr *MockConnectorMockRecorder) SetQuotaLimits(ctx, rootName, limits any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetQuotaLimits", reflect.TypeOf((*MockConnector)(nil).SetQuotaLimits), ctx, rootName, limits)
+}
+
 // SetMailboxSubscribed mocks base method.
 func (m *MockConnector) SetMailboxSubscribed(ctx context.Context, cache connector.IMAPStateWrite, mboxID imap.MailboxID, subscribed bool) error {
 	m.ctrl.T.Helper()
