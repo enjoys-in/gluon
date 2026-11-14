@@ -30,6 +30,7 @@ const (
 	SEARCHRES        Capability = `SEARCHRES`
 	CreateSpecialUse Capability = `CREATE-SPECIAL-USE`
 	MULTIAPPEND      Capability = `MULTIAPPEND`
+	UIDBatches       Capability = `UIDBATCHES`
 )
 
 func IsCapabilityAvailableBeforeAuth(c Capability) bool {
@@ -37,7 +38,7 @@ func IsCapabilityAvailableBeforeAuth(c Capability) bool {
 	case IMAP4rev1, StartTLS, IDLE, ID, AUTHPLAIN, LiteralPlus, SASLIR:
 		return true
 	case UNSELECT, UIDPLUS, MOVE, QUOTA, SORT, ThreadReferences, NAMESPACE,
-		CHILDREN, SpecialUse, ListExtended, ListStatus, ESEARCH, UNAUTHENTICATE, StatusSize, WITHIN, ESORT, SortDisplay, SEARCHRES, CreateSpecialUse, MULTIAPPEND:
+		CHILDREN, SpecialUse, ListExtended, ListStatus, ESEARCH, UNAUTHENTICATE, StatusSize, WITHIN, ESORT, SortDisplay, SEARCHRES, CreateSpecialUse, MULTIAPPEND, UIDBatches:
 		return false
 	}
 

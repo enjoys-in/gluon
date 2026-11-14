@@ -92,6 +92,7 @@ func (s *Session) handleCommand(
 		*command.Move,
 		*command.Sort,
 		*command.Thread,
+		*command.UIDBatches,
 		*command.UID:
 		return s.handleSelectedCommand(ctx, tag, cmd, ch)
 
@@ -321,6 +322,10 @@ func (s *Session) handleWithMailbox(
 	case *command.Thread:
 		// RFC5256 THREAD Command
 		return s.handleThread(ctx, tag, cmd, mailbox, ch)
+
+	case *command.UIDBatches:
+		// UIDBATCHES Command
+		return s.handleUIDBatches(ctx, tag, cmd, mailbox, ch)
 
 	default:
 		return nil, fmt.Errorf("bad command")
