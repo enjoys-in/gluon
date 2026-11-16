@@ -18,10 +18,10 @@ func TestDelete(t *testing.T) {
 		checkMailboxesMatchNamesAndAttributes(
 			t, client, "", "*",
 			map[string][]string{
-				"INBOX":       {goimap.UnmarkedAttr},
-				"blurdybloop": {goimap.UnmarkedAttr},
-				"foo":         {goimap.UnmarkedAttr},
-				"foo.bar":     {goimap.UnmarkedAttr},
+				"INBOX":       {goimap.HasNoChildrenAttr, goimap.UnmarkedAttr},
+				"blurdybloop": {goimap.HasNoChildrenAttr, goimap.UnmarkedAttr},
+				"foo":         {goimap.HasChildrenAttr, goimap.UnmarkedAttr},
+				"foo.bar":     {goimap.HasNoChildrenAttr, goimap.UnmarkedAttr},
 			},
 		)
 
@@ -31,17 +31,17 @@ func TestDelete(t *testing.T) {
 		checkMailboxesMatchNamesAndAttributes(
 			t, client, "", "*",
 			map[string][]string{
-				"INBOX":   {goimap.UnmarkedAttr},
-				"foo":     {goimap.NoSelectAttr},
-				"foo.bar": {goimap.UnmarkedAttr},
+				"INBOX":   {goimap.HasNoChildrenAttr, goimap.UnmarkedAttr},
+				"foo":     {goimap.HasChildrenAttr, goimap.NoSelectAttr},
+				"foo.bar": {goimap.HasNoChildrenAttr, goimap.UnmarkedAttr},
 			},
 		)
 
 		checkMailboxesMatchNamesAndAttributes(
 			t, client, "", "%",
 			map[string][]string{
-				"INBOX": {goimap.UnmarkedAttr},
-				"foo":   {goimap.NoSelectAttr},
+				"INBOX": {goimap.HasNoChildrenAttr, goimap.UnmarkedAttr},
+				"foo":   {goimap.HasChildrenAttr, goimap.NoSelectAttr},
 			},
 		)
 
@@ -62,10 +62,10 @@ func TestDeleteMailboxHasChildren(t *testing.T) {
 		c.C(`A004 SELECT "INBOX"`).OK(`A004`)
 		c.C(`A005 LIST "" *`)
 		c.S(
-			`* LIST (\Unmarked) "/" "INBOX"`,
-			`* LIST (\Unmarked) "/" "blurdybloop"`,
-			`* LIST (\Marked) "/" "foo"`,
-			`* LIST (\Marked) "/" "foo/bar"`,
+			`* LIST (\HasNoChildren \Unmarked) "/" "INBOX"`,
+			`* LIST (\HasNoChildren \Unmarked) "/" "blurdybloop"`,
+			`* LIST (\HasChildren \Marked) "/" "foo"`,
+			`* LIST (\HasNoChildren \Marked) "/" "foo/bar"`,
 		)
 		c.OK(`A005`)
 
@@ -81,10 +81,10 @@ func TestDeleteMailboxHasChildren(t *testing.T) {
 
 		c.C(`A009 LIST "" *`)
 		c.S(
-			`* LIST (\Unmarked) "/" "INBOX"`,
-			`* LIST (\Unmarked) "/" "blurdybloop"`,
-			`* LIST (\Noselect) "/" "foo"`,
-			`* LIST (\Marked) "/" "foo/bar"`,
+			`* LIST (\HasNoChildren \Unmarked) "/" "INBOX"`,
+			`* LIST (\HasNoChildren \Unmarked) "/" "blurdybloop"`,
+			`* LIST (\HasChildren \Noselect) "/" "foo"`,
+			`* LIST (\HasNoChildren \Marked) "/" "foo/bar"`,
 		)
 		c.OK(`A009`)
 	})
@@ -105,7 +105,7 @@ func TestDeleteCannotDeleteMissingMailbox(t *testing.T) {
 func TestDeleteSelectedMailboxCausesDisconnect(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t), func(c *testConnection, _ *testSession) {
 		c.C("b001 CREATE mbox1")
-		c.S("b001 OK CREATE")
+		c.Sx(`^b001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		c.C("b002 SELECT mbox1").OK("b002")
 		c.C("b003 DELETE mbox1").OK("b003")
@@ -116,7 +116,7 @@ func TestDeleteSelectedMailboxCausesDisconnect(t *testing.T) {
 func TestDeleteExaminedMailboxCausesDisconnect(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t), func(c *testConnection, _ *testSession) {
 		c.C("b001 CREATE mbox1")
-		c.S("b001 OK CREATE")
+		c.Sx(`^b001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		c.C("b002 EXAMINE mbox1").OK("b002")
 		c.C("b003 DELETE mbox1").OK("b003")
@@ -127,7 +127,7 @@ func TestDeleteExaminedMailboxCausesDisconnect(t *testing.T) {
 func TestDeleteSelectedMailboxCausesDisconnectOnOtherClients(t *testing.T) {
 	runManyToOneTestWithAuth(t, defaultServerOptions(t), []int{1, 2}, func(c map[int]*testConnection, s *testSession) {
 		c[1].C("b001 CREATE mbox1")
-		c[1].S("b001 OK CREATE")
+		c[1].Sx(`^b001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		s.flush("user")
 
@@ -147,7 +147,7 @@ func TestDeleteSelectedMailboxCausesDisconnectOnOtherClients(t *testing.T) {
 func TestDeleteExaminedMailboxCausesDisconnectOnOtherClients(t *testing.T) {
 	runManyToOneTestWithAuth(t, defaultServerOptions(t), []int{1, 2}, func(c map[int]*testConnection, s *testSession) {
 		c[1].C("b001 CREATE mbox1")
-		c[1].S("b001 OK CREATE")
+		c[1].Sx(`^b001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		s.flush("user")
 

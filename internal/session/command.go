@@ -40,13 +40,17 @@ func (s *Session) startCommandReader(ctx context.Context) <-chan commandResult {
 			options = append(options, command.WithDisableIMAPAuthenticate())
 		}
 
+		if s.bearerAuthentication {
+			options = append(options, command.WithBearerAuthentication())
+		}
+
 		parser := command.NewParser(s.scanner, options...)
 
 		for {
 			s.inputCollector.Reset()
 
 			cmd, err := parser.Parse()
-			s.logIncoming(string(s.inputCollector.Bytes()))
+			s.logIncoming(s.inputCollector.Bytes())
 			if err != nil {
 				var parserError *rfcparser.Error
 				if !errors.As(err, &parserError) {

@@ -16,6 +16,8 @@ type snapshot struct {
 
 	state    *State
 	messages *snapMsgList
+
+	searchResult []imap.UID
 }
 
 func newSnapshot(ctx context.Context, state *State, client db.ReadOnly, mbox *db.Mailbox) (*snapshot, error) {
@@ -139,6 +141,9 @@ func (snap *snapshot) getAllMessagesIDsMarkedDelete() []db.MessageIDPair {
 
 func (snap *snapshot) getMessagesInRange(ctx context.Context, seq []command.SeqRange) ([]snapMsgWithSeq, error) {
 	switch {
+	case command.IsSearchResultSeqSet(seq):
+		return snap.searchResultMessages(), nil
+
 	case contexts.IsUID(ctx):
 		return snap.getMessagesInUIDRange(seq)
 
@@ -166,10 +171,22 @@ func (u UIDInterval) contains(uid imap.UID) bool {
 }
 
 func (snap *snapshot) resolveSeqInterval(seq []command.SeqRange) ([]SeqInterval, error) {
+	if command.IsSearchResultSeqSet(seq) {
+		seqs, _ := snap.searchResultIntervals()
+
+		return seqs, nil
+	}
+
 	return snap.messages.resolveSeqInterval(seq)
 }
 
 func (snap *snapshot) resolveUIDInterval(seq []command.SeqRange) ([]UIDInterval, error) {
+	if command.IsSearchResultSeqSet(seq) {
+		_, uids := snap.searchResultIntervals()
+
+		return uids, nil
+	}
+
 	return snap.messages.resolveUIDInterval(seq)
 }
 

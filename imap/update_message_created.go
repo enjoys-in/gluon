@@ -14,7 +14,7 @@ type ParsedMessage struct {
 }
 
 func NewParsedMessage(literal []byte) (*ParsedMessage, error) {
-	root := rfc822.Parse(literal)
+	root := rfc822.ParseNoAlloc(literal)
 
 	body, structure, err := Structure(root)
 	if err != nil {

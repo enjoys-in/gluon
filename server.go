@@ -93,6 +93,15 @@ type Server struct {
 	// disableIMAPAuthenticate disables the IMAP AUTHENTICATE command (client can then only authenticate using LOGIN).
 	disableIMAPAuthenticate bool
 
+	// oauthLogin lets clients log in with an OAuth 2.0 bearer token (AUTHENTICATE OAUTHBEARER and XOAUTH2).
+	oauthLogin bool
+
+	// disableUnauthenticate disables the IMAP UNAUTHENTICATE command.
+	disableUnauthenticate bool
+
+	// messageLimit is the most messages one IMAP command processes (RFC 9738). Zero means no limit.
+	messageLimit int
+
 	uidValidityGenerator imap.UIDValidityGenerator
 
 	panicHandler async.PanicHandler
@@ -389,6 +398,18 @@ func (s *Server) addSession(ctx context.Context, conn net.Conn) (*session.Sessio
 
 	if s.outLogger != nil {
 		s.sessions[nextID].SetOutgoingLogger(s.outLogger)
+	}
+
+	if s.oauthLogin {
+		s.sessions[nextID].SetBearerAuthentication()
+	}
+
+	if s.disableUnauthenticate {
+		s.sessions[nextID].DisableUnauthenticate()
+	}
+
+	if s.messageLimit > 0 {
+		s.sessions[nextID].SetMessageLimit(s.messageLimit)
 	}
 
 	s.publish(events.SessionAdded{

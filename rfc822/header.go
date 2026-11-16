@@ -363,17 +363,46 @@ func SetHeaderValueNoMemCopy(literal []byte, key, val string) (io.Reader, int, e
 	data := joinLine([]byte(key), []byte(val))
 
 	if !foundFirstEntry {
-		return io.MultiReader(bytes.NewReader(rawHeader), bytes.NewReader(data), bytes.NewReader(body)), len(rawHeader) + len(data) + len(body), nil
+		reader := newSizedReader(rawHeader, data, body)
+
+		return reader, reader.Len(), nil
 	}
 
 	part1 := literal[0:parsedHeaderEntry.keyStart]
 	part2 := literal[parsedHeaderEntry.keyStart:]
 
-	return io.MultiReader(
-		bytes.NewReader(part1),
-		bytes.NewReader(data),
-		bytes.NewReader(part2),
-	), len(part1) + len(part2) + len(data), nil
+	reader := newSizedReader(part1, data, part2)
+
+	return reader, reader.Len(), nil
+}
+
+// sizedReader reads its parts one after the other and reports how many bytes are left to read.
+type sizedReader struct {
+	io.Reader
+	remaining int
+}
+
+func newSizedReader(parts ...[]byte) *sizedReader {
+	readers := make([]io.Reader, 0, len(parts))
+	size := 0
+
+	for _, part := range parts {
+		readers = append(readers, bytes.NewReader(part))
+		size += len(part)
+	}
+
+	return &sizedReader{Reader: io.MultiReader(readers...), remaining: size}
+}
+
+func (r *sizedReader) Read(p []byte) (int, error) {
+	n, err := r.Reader.Read(p)
+	r.remaining -= n
+
+	return n, err
+}
+
+func (r *sizedReader) Len() int {
+	return r.remaining
 }
 
 // GetHeaderValue is a helper method that queries a header value in a message literal.

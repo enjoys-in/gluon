@@ -262,6 +262,11 @@ func (u *expunge) handle(ctx context.Context, snap *snapshot, _ StateID) ([]resp
 		return nil, nil, err
 	}
 
+	uid, err := snap.getMessageUID(u.messageID)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	if err := snap.expungeMessage(u.messageID); err != nil {
 		return nil, nil, err
 	}
@@ -271,7 +276,7 @@ func (u *expunge) handle(ctx context.Context, snap *snapshot, _ StateID) ([]resp
 		return nil, nil, nil
 	}
 
-	return []response.Response{response.Expunge(seq)}, nil, nil
+	return []response.Response{response.Expunge(seq).ForUID(uid)}, nil, nil
 }
 
 func (u *expunge) getMessageID() imap.InternalMessageID {
@@ -360,13 +365,13 @@ func (u *fetch) handle(_ context.Context, snap *snapshot, _ StateID) ([]response
 
 	items := []response.Item{response.ItemFlags(newFlags)}
 
+	uid, err := snap.getMessageUID(u.messageID)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	// When handling any UID command, we should always include the message's UID.
 	if u.asUID {
-		uid, err := snap.getMessageUID(u.messageID)
-		if err != nil {
-			return nil, nil, err
-		}
-
 		items = append(items, response.ItemUID(uid))
 	}
 
@@ -375,7 +380,7 @@ func (u *fetch) handle(_ context.Context, snap *snapshot, _ StateID) ([]response
 		return nil, nil, err
 	}
 
-	return []response.Response{response.Fetch(seq).WithItems(items...)}, nil, nil
+	return []response.Response{response.Fetch(seq).ForUID(uid).WithItems(items...)}, nil, nil
 }
 
 func (u *fetch) getMessageID() imap.InternalMessageID {

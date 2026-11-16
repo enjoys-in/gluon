@@ -35,11 +35,7 @@ func (r *threadResponse) String() string {
 
 	sb.WriteString("* THREAD ")
 
-	for i, root := range r.roots {
-		if i > 0 {
-			sb.WriteString(" ")
-		}
-
+	for _, root := range r.roots {
 		writeThreadNode(&sb, root, true)
 	}
 
@@ -57,17 +53,16 @@ func writeThreadNode(sb *strings.Builder, node *ThreadNode, isRoot bool) {
 		fmt.Fprintf(sb, "%d", node.Num)
 	}
 
-	if len(node.Children) == 1 && !isRoot {
+	if node.Num > 0 && len(node.Children) > 0 {
+		sb.WriteString(" ")
+	}
+
+	if len(node.Children) == 1 {
 		// Linear chain: parent child
-		sb.WriteString(" ")
-		writeThreadNode(sb, node.Children[0], false)
-	} else if len(node.Children) == 1 && isRoot {
-		sb.WriteString(" ")
 		writeThreadNode(sb, node.Children[0], false)
 	} else if len(node.Children) > 1 {
 		// Branching: parent (child1)(child2)
 		for _, child := range node.Children {
-			sb.WriteString(" ")
 			writeThreadNode(sb, child, true)
 		}
 	}

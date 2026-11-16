@@ -18,12 +18,18 @@ type dummyState struct {
 	mailboxes  map[imap.MailboxID]*dummyMailbox
 	lastIMAPID imap.IMAPID
 
+	serverMetadata map[string][]byte
+
 	lock sync.RWMutex
 }
 
 type dummyMailbox struct {
-	mboxName  []string
-	exclusive bool
+	mboxName     []string
+	exclusive    bool
+	unsubscribed bool
+	specialUse   imap.FlagSet
+	acl          map[string]string
+	metadata     map[string][]byte
 }
 
 type dummyMessage struct {
@@ -321,7 +327,7 @@ func (state *dummyState) toMailbox(mboxID imap.MailboxID) imap.Mailbox {
 		Name:           state.mailboxes[mboxID].mboxName,
 		Flags:          state.flags,
 		PermanentFlags: state.permFlags,
-		Attributes:     state.attrs,
+		Attributes:     state.attrs.AddFlagSet(state.mailboxes[mboxID].specialUse),
 	}
 }
 

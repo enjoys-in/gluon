@@ -18,7 +18,7 @@ import (
 func TestRecoveryMBoxNotVisibleWhenEmpty(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t), func(c *testConnection, s *testSession) {
 		c.C(`A103 LIST "" *`)
-		c.S(`* LIST (\Unmarked) "/" "INBOX"`)
+		c.S(`* LIST (\HasNoChildren \Unmarked) "/" "INBOX"`)
 		c.OK(`A103`)
 	})
 }
@@ -27,7 +27,7 @@ func TestRecoveryMBoxVisibleWhenNotEmpty(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t, withConnectorBuilder(&failAppendLabelConnectorBuilder{})), func(c *testConnection, s *testSession) {
 		c.doAppend("INBOX", buildRFC5322TestLiteral("To: Test@test.com")).expect("NO")
 		c.C(`A103 LIST "" *`)
-		c.S(`* LIST (\Unmarked) "/" "INBOX"`,
+		c.S(`* LIST (\HasNoChildren \Unmarked) "/" "INBOX"`,
 			fmt.Sprintf(`* LIST (\Marked \Noinferiors) "/" "%v"`, ids.GluonRecoveryMailboxName),
 		)
 		c.OK(`A103`)

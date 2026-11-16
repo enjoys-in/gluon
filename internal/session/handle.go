@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ProtonMail/gluon/imap/command"
@@ -29,6 +30,8 @@ func (s *Session) handleOther(
 				s.log.WithError(err).WithField("cmd", cmd.SanitizedString()).Error("Command failed")
 				if res, ok := response.FromError(err); ok {
 					resCh <- res
+				} else if errors.Is(err, ErrInvalidUTF8MailboxName) {
+					resCh <- response.Bad(tag).WithError(err)
 				} else {
 					resCh <- response.No(tag).WithError(err)
 				}
@@ -54,12 +57,14 @@ func (s *Session) handleCommand(
 		*command.Capability,
 		*command.IDGet,
 		*command.IDSet,
-		*command.Noop:
+		*command.Noop,
+		*command.Unauthenticate:
 		return s.handleAnyCommand(ctx, tag, cmd, ch)
 
 	case
 		*command.Login,
-		*command.Authenticate:
+		*command.Authenticate,
+		*command.AuthenticateBearer:
 		return s.handleNotAuthenticatedCommand(ctx, tag, cmd, ch)
 
 	case
@@ -76,6 +81,15 @@ func (s *Session) handleCommand(
 		*command.Append,
 		*command.GetQuota,
 		*command.GetQuotaRoot,
+		*command.SetQuota,
+		*command.SetACL,
+		*command.DeleteACL,
+		*command.GetACL,
+		*command.ListRights,
+		*command.MyRights,
+		*command.SetMetadata,
+		*command.GetMetadata,
+		*command.Enable,
 		*command.Namespace:
 		return s.handleAuthenticatedCommand(ctx, tag, cmd, ch)
 	case
@@ -91,6 +105,7 @@ func (s *Session) handleCommand(
 		*command.Move,
 		*command.Sort,
 		*command.Thread,
+		*command.UIDBatches,
 		*command.UID:
 		return s.handleSelectedCommand(ctx, tag, cmd, ch)
 
@@ -122,6 +137,10 @@ func (s *Session) handleAnyCommand(
 		// RFC 2971 ID
 		return s.handleIDGet(ctx, tag, ch)
 
+	case *command.Unauthenticate:
+		// RFC 8437 UNAUTHENTICATE Command
+		return s.handleUnauthenticate(ctx, tag, cmd, ch)
+
 	default:
 		return fmt.Errorf("bad command")
 	}
@@ -141,6 +160,9 @@ func (s *Session) handleNotAuthenticatedCommand(
 		// 6.2.2 AUTHENTICATE Command we only support the PLAIN mechanism,
 		// it's similar to LOGIN, so we simply handle the command as login
 		return s.handleLogin(ctx, tag, (*command.Login)(cmd), ch)
+	case *command.AuthenticateBearer:
+		// RFC 7628 OAUTHBEARER and XOAUTH2
+		return s.handleAuthenticateBearer(ctx, tag, cmd, ch)
 	default:
 		return fmt.Errorf("bad command")
 	}
@@ -212,6 +234,42 @@ func (s *Session) handleAuthenticatedCommand(
 		// RFC 2087 GETQUOTAROOT Command
 		return s.handleGetQuotaRoot(ctx, tag, cmd, ch)
 
+	case *command.SetQuota:
+		// RFC 9208 SETQUOTA Command
+		return s.handleSetQuota(ctx, tag, cmd, ch)
+
+	case *command.SetACL:
+		// RFC 4314 SETACL Command
+		return s.handleSetACL(ctx, tag, cmd, ch)
+
+	case *command.DeleteACL:
+		// RFC 4314 DELETEACL Command
+		return s.handleDeleteACL(ctx, tag, cmd, ch)
+
+	case *command.GetACL:
+		// RFC 4314 GETACL Command
+		return s.handleGetACL(ctx, tag, cmd, ch)
+
+	case *command.ListRights:
+		// RFC 4314 LISTRIGHTS Command
+		return s.handleListRights(ctx, tag, cmd, ch)
+
+	case *command.MyRights:
+		// RFC 4314 MYRIGHTS Command
+		return s.handleMyRights(ctx, tag, cmd, ch)
+
+	case *command.SetMetadata:
+		// RFC 5464 SETMETADATA Command
+		return s.handleSetMetadata(ctx, tag, cmd, ch)
+
+	case *command.GetMetadata:
+		// RFC 5464 GETMETADATA Command
+		return s.handleGetMetadata(ctx, tag, cmd, ch)
+
+	case *command.Enable:
+		// RFC 5161 ENABLE Command
+		return s.handleEnable(ctx, tag, cmd, ch)
+
 	case *command.Namespace:
 		// RFC 2342 NAMESPACE Command
 		return s.handleNamespace(ctx, tag, cmd, ch)
@@ -264,6 +322,10 @@ func (s *Session) handleWithMailbox(
 	mailbox *state.Mailbox,
 	ch chan response.Response,
 ) (response.Response, error) {
+	if s.uidOnly.Load() && usesSequenceNumbers(cmd) {
+		return response.Bad(tag).WithItems(response.ItemUIDRequired()).WithError(ErrUIDRequired), nil
+	}
+
 	switch cmd := cmd.(type) {
 	case *command.Check:
 		// 6.4.1. CHECK Command
@@ -316,6 +378,10 @@ func (s *Session) handleWithMailbox(
 	case *command.Thread:
 		// RFC5256 THREAD Command
 		return s.handleThread(ctx, tag, cmd, mailbox, ch)
+
+	case *command.UIDBatches:
+		// UIDBATCHES Command
+		return s.handleUIDBatches(ctx, tag, cmd, mailbox, ch)
 
 	default:
 		return nil, fmt.Errorf("bad command")

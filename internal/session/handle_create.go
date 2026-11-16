@@ -2,8 +2,10 @@ package session
 
 import (
 	"context"
+	"errors"
 	"strings"
 
+	"github.com/ProtonMail/gluon/connector"
 	"github.com/ProtonMail/gluon/imap"
 	"github.com/ProtonMail/gluon/imap/command"
 	"github.com/ProtonMail/gluon/internal/response"
@@ -25,12 +27,27 @@ func (s *Session) handleCreate(ctx context.Context, tag string, cmd *command.Cre
 		return ErrCreateInbox
 	}
 
-	if err := s.state.Create(ctx, nameUTF8); err != nil {
+	// RFC 6154 CREATE-SPECIAL-USE Extension
+	specialUse, err := validateSpecialUse(cmd.SpecialUse)
+	if err != nil {
+		return response.No(tag).WithError(err).WithItems(response.ItemUseAttr())
+	}
+
+	if err := s.state.CreateSpecialUse(ctx, nameUTF8, specialUse); errors.Is(err, connector.ErrSpecialUseNotSupported) {
+		return response.No(tag).WithError(err).WithItems(response.ItemUseAttr())
+	} else if err != nil {
 		observability.AddMessageRelatedMetric(ctx, metrics.GenerateFailedToCreateMailbox())
 		return err
 	}
 
-	ch <- response.Ok(tag).WithMessage("CREATE")
+	res := response.Ok(tag).WithMessage("CREATE")
+
+	// RFC 8474 OBJECTID Extension
+	if mailboxID, err := s.state.MailboxObjectID(ctx, nameUTF8); err == nil {
+		res = res.WithItems(response.ItemMailboxID(mailboxID))
+	}
+
+	ch <- res
 
 	return nil
 }

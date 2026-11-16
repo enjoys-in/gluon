@@ -97,12 +97,27 @@ func (state *State) actionCreateMessage(
 	isSelectedMailbox bool,
 	cameFromDrafts bool,
 ) ([]Update, imap.UID, error) {
-	var updates []Update
-
 	createUpdates, internalID, res, newLiteral, err := state.user.GetRemote().CreateMessage(ctx, tx, mboxID.RemoteID, literal, flags, date)
 	if err != nil {
 		return nil, 0, err
 	}
+
+	return state.actionAddCreatedMessage(ctx, tx, mboxID, createUpdates, internalID, res, newLiteral, isSelectedMailbox, cameFromDrafts)
+}
+
+// actionAddCreatedMessage adds a message the connector has just created to the mailbox.
+func (state *State) actionAddCreatedMessage(
+	ctx context.Context,
+	tx db.Transaction,
+	mboxID db.MailboxIDPair,
+	createUpdates []Update,
+	internalID imap.InternalMessageID,
+	res imap.Message,
+	newLiteral []byte,
+	isSelectedMailbox bool,
+	cameFromDrafts bool,
+) ([]Update, imap.UID, error) {
+	var updates []Update
 
 	updates = append(updates, createUpdates...)
 

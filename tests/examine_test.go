@@ -16,7 +16,7 @@ func TestExamineWithLiteral(t *testing.T) {
 	// IMAP client. The rest of the functionality is still tested in the IMAP client test.
 	runOneToOneTestWithAuth(t, defaultServerOptions(t, withUIDValidityGenerator(imap.NewFixedUIDValidityGenerator(imap.UID(1)))), func(c *testConnection, _ *testSession) {
 		c.C("A002 CREATE Archive")
-		c.S("A002 OK CREATE")
+		c.Sx(`^A002 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		c.doAppend(`Archive`, buildRFC5322TestLiteral(`To: 3@pm.me`), `\Seen`).expect("OK")
 
@@ -29,6 +29,7 @@ func TestExamineWithLiteral(t *testing.T) {
 			`* OK [PERMANENTFLAGS (\Deleted \Flagged \Seen)]`,
 			`* OK [UIDNEXT 2]`,
 			`* OK [UIDVALIDITY 1]`)
+		c.Sx(`^\* OK \[MAILBOXID \([\w-]+\)\]`)
 		c.S(`a007 OK [READ-ONLY] EXAMINE`)
 	})
 }

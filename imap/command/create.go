@@ -7,7 +7,8 @@ import (
 )
 
 type Create struct {
-	Mailbox string
+	Mailbox    string
+	SpecialUse []string
 }
 
 func (l Create) String() string {
@@ -21,7 +22,7 @@ func (l Create) SanitizedString() string {
 type CreateCommandParser struct{}
 
 func (CreateCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
-	// create          = "CREATE" SP mailbox
+	// create          = "CREATE" SP mailbox [create-params]
 	if err := p.Consume(rfcparser.TokenTypeSP, "expected space after command"); err != nil {
 		return nil, err
 	}
@@ -31,7 +32,18 @@ func (CreateCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
 		return nil, err
 	}
 
+	var specialUse []string
+
+	if ok, err := p.Matches(rfcparser.TokenTypeSP); err != nil {
+		return nil, err
+	} else if ok {
+		if specialUse, err = parseCreateSpecialUse(p); err != nil {
+			return nil, err
+		}
+	}
+
 	return &Create{
-		Mailbox: mailbox.Value,
+		Mailbox:    mailbox.Value,
+		SpecialUse: specialUse,
 	}, nil
 }

@@ -77,15 +77,15 @@ func TestParser_AuthenticateFailures(t *testing.T) {
 		},
 		{
 			input:                []string{`A003 AUTHENTICATE PLAIN GARBAGE`, `*`},
-			expectedMessage:      "expected CR",
+			expectedMessage:      messageInvalidBase64Content,
 			continuationExpected: false,
-			description:          "AUTHENTICATE with garbage before CRLF should fail",
+			description:          "AUTHENTICATE with garbage as the initial response should fail",
 		},
 		{
 			input:                []string{`A003 AUTHENTICATE PLAIN `, `*`},
-			expectedMessage:      "expected CR",
+			expectedMessage:      messageInvalidAuthenticationData,
 			continuationExpected: false,
-			description:          "AUTHENTICATE with extra space before CRLF should fail",
+			description:          "AUTHENTICATE with an empty initial response should fail",
 		},
 		{
 			input:                []string{`A003 AUTHENTICATE PLAIN`, `* `},

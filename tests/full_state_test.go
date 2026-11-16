@@ -39,8 +39,8 @@ func TestSimpleMailCopy(t *testing.T) {
 		checkMailboxesMatchNamesAndAttributes(
 			t, client, "", "*",
 			map[string][]string{
-				"INBOX":     {goimap.UnmarkedAttr},
-				mailboxName: {goimap.UnmarkedAttr},
+				"INBOX":     {goimap.HasNoChildrenAttr, goimap.UnmarkedAttr},
+				mailboxName: {goimap.HasNoChildrenAttr, goimap.UnmarkedAttr},
 			},
 		)
 
@@ -93,7 +93,7 @@ func TestReceptionOnIdle(t *testing.T) {
 		checkMailboxesMatchNamesAndAttributes(
 			t, c, "", "*",
 			map[string][]string{
-				mailboxName: {goimap.UnmarkedAttr},
+				mailboxName: {goimap.HasNoChildrenAttr, goimap.UnmarkedAttr},
 			},
 		)
 
@@ -192,10 +192,10 @@ func TestMorningFiltering(t *testing.T) {
 		checkMailboxesMatchNamesAndAttributes(
 			t, client, "", "*",
 			map[string][]string{
-				"INBOX":     {goimap.UnmarkedAttr},
-				"Archive":   {goimap.UnmarkedAttr},
-				"ReadLater": {goimap.UnmarkedAttr},
-				mbox:        {goimap.UnmarkedAttr},
+				"INBOX":     {goimap.HasNoChildrenAttr, goimap.UnmarkedAttr},
+				"Archive":   {goimap.HasNoChildrenAttr, goimap.UnmarkedAttr},
+				"ReadLater": {goimap.HasNoChildrenAttr, goimap.UnmarkedAttr},
+				mbox:        {goimap.HasNoChildrenAttr, goimap.UnmarkedAttr},
 			},
 		)
 

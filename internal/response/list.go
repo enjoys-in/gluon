@@ -5,11 +5,13 @@ import (
 	"strconv"
 
 	"github.com/ProtonMail/gluon/imap"
+	"github.com/bradenaw/juniper/xslices"
 )
 
 type list struct {
 	name, del string
 	att       imap.FlagSet
+	childInfo []string
 }
 
 func List() *list {
@@ -31,6 +33,11 @@ func (r *list) WithAttributes(att imap.FlagSet) *list {
 	return r
 }
 
+func (r *list) WithChildInfo(childInfo []string) *list {
+	r.childInfo = childInfo
+	return r
+}
+
 func (r *list) Send(s Session) error {
 	return s.WriteResponse(r.String())
 }
@@ -42,5 +49,11 @@ func (r *list) String() string {
 		del = strconv.Quote(r.del)
 	}
 
-	return fmt.Sprintf(`* LIST (%v) %v %v`, join(r.att.ToSlice()), del, strconv.Quote(r.name))
+	res := fmt.Sprintf(`* LIST (%v) %v %v`, join(r.att.ToSlice()), del, strconv.Quote(r.name))
+
+	if len(r.childInfo) > 0 {
+		res += fmt.Sprintf(` ("CHILDINFO" (%v))`, join(xslices.Map(r.childInfo, strconv.Quote)))
+	}
+
+	return res
 }

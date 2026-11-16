@@ -9,6 +9,7 @@ import (
 type List struct {
 	Mailbox     string
 	ListMailbox string
+	Extended    ListExtended
 }
 
 func (l List) String() string {
@@ -27,6 +28,12 @@ func (ListCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
 		return nil, err
 	}
 
+	var extended ListExtended
+
+	if err := parseListSelectOptions(p, &extended); err != nil {
+		return nil, err
+	}
+
 	mailbox, err := ParseMailbox(p)
 	if err != nil {
 		return nil, err
@@ -36,14 +43,19 @@ func (ListCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
 		return nil, err
 	}
 
-	listMailbox, err := parseListMailbox(p)
+	listMailbox, err := parseListPatterns(p, &extended)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := parseListReturnOptions(p, &extended); err != nil {
 		return nil, err
 	}
 
 	return &List{
 		Mailbox:     mailbox.Value,
 		ListMailbox: listMailbox.Value,
+		Extended:    extended,
 	}, nil
 }
 
@@ -57,6 +69,10 @@ func parseListMailbox(p *rfcparser.Parser) (rfcparser.String, error) {
 	*/
 	isListChar := func(tt rfcparser.TokenType) bool {
 		return rfcparser.IsAtomChar(tt) || rfcparser.IsRespSpecial(tt) || tt == rfcparser.TokenTypePercent || tt == rfcparser.TokenTypeAsterisk
+	}
+
+	if p.Check(rfcparser.TokenTypeLCurly) {
+		return p.ParseString()
 	}
 
 	if ok, err := p.MatchesWith(isListChar); err != nil {

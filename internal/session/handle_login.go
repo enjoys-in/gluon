@@ -7,6 +7,7 @@ import (
 	"github.com/ProtonMail/gluon/imap"
 	"github.com/ProtonMail/gluon/imap/command"
 	"github.com/ProtonMail/gluon/internal/response"
+	"github.com/ProtonMail/gluon/internal/state"
 	"github.com/ProtonMail/gluon/profiling"
 )
 
@@ -14,6 +15,13 @@ func (s *Session) handleLogin(ctx context.Context, tag string, cmd *command.Logi
 	profiling.Start(ctx, profiling.CmdTypeLogin)
 	defer profiling.Stop(ctx, profiling.CmdTypeLogin)
 
+	return s.login(tag, cmd.UserID, ch, func() (*state.State, error) {
+		return s.backend.GetState(ctx, cmd.UserID, []byte(cmd.Password), s.sessionID)
+	})
+}
+
+// login logs the session in with the state getState returns for the user.
+func (s *Session) login(tag, username string, ch chan response.Response, getState func() (*state.State, error)) error {
 	s.userLock.Lock()
 	defer s.userLock.Unlock()
 
@@ -26,11 +34,11 @@ func (s *Session) handleLogin(ctx context.Context, tag string, cmd *command.Logi
 		return response.Bad(tag).WithError(ErrAlreadyAuthenticated)
 	}
 
-	state, err := s.backend.GetState(ctx, cmd.UserID, []byte(cmd.Password), s.sessionID)
+	state, err := getState()
 	if err != nil {
 		s.eventCh <- events.LoginFailed{
 			SessionID: s.sessionID,
-			Username:  cmd.UserID,
+			Username:  username,
 		}
 
 		return err

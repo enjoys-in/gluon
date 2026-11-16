@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ProtonMail/gluon/async"
@@ -28,7 +29,6 @@ import (
 	"github.com/ProtonMail/gluon/reporter"
 	"github.com/ProtonMail/gluon/rfcparser"
 	"github.com/ProtonMail/gluon/version"
-	"github.com/emersion/go-imap/utf7"
 	"github.com/sirupsen/logrus"
 )
 
@@ -91,6 +91,21 @@ type Session struct {
 	// disableIMAPAuthenticate disables the IMAP AUTHENTICATE command (client can then only authenticate using LOGIN).
 	disableIMAPAuthenticate bool
 
+	// bearerAuthentication lets AUTHENTICATE accept an OAuth 2.0 bearer token (OAUTHBEARER and XOAUTH2).
+	bearerAuthentication bool
+
+	// unauthenticateDisabled disables the IMAP UNAUTHENTICATE command.
+	unauthenticateDisabled bool
+
+	// uidOnly is set once the client has enabled UIDONLY: messages are then named by their UIDs only (RFC 9586).
+	uidOnly atomic.Bool
+
+	// messageLimit is the most messages one command processes (RFC 9738). Zero means no limit.
+	messageLimit int
+
+	// utf8Enabled is set once the client has enabled UTF8=ACCEPT: mailbox names are then UTF-8 in both directions.
+	utf8Enabled bool
+
 	// panicHandler The panic handler.
 	panicHandler async.PanicHandler
 
@@ -117,14 +132,14 @@ func New(
 	inputCollector := command.NewInputCollector(bufio.NewReader(conn))
 	scanner := rfcparser.NewScannerWithReader(inputCollector)
 
-	caps := []imap.Capability{imap.IMAP4rev1, imap.UNSELECT, imap.UIDPLUS, imap.MOVE, imap.ID, imap.QUOTA, imap.SORT, imap.ThreadReferences, imap.NAMESPACE}
+	caps := []imap.Capability{imap.IMAP4rev1, imap.UNSELECT, imap.UIDPLUS, imap.MOVE, imap.ID, imap.QUOTA, imap.SORT, imap.ThreadReferences, imap.NAMESPACE, imap.CHILDREN, imap.SpecialUse, imap.ListExtended, imap.ListStatus, imap.ESEARCH, imap.LiteralPlus, imap.UNAUTHENTICATE, imap.StatusSize, imap.WITHIN, imap.ESORT, imap.SortDisplay, imap.SEARCHRES, imap.CreateSpecialUse, imap.MULTIAPPEND, imap.UIDBatches, imap.PREVIEW, imap.OBJECTID, imap.QUOTASET, imap.ACL, imap.ACLNewRights, imap.METADATA, imap.BINARY, imap.ENABLE, imap.UTF8Accept, imap.UIDOnly}
 
 	if !featureFlagProvider.GetFlagValue(unleash.CapabilityKillSwitchMap[string(imap.IDLE)]) {
 		caps = append(caps, imap.IDLE)
 	}
 
 	if !disableIMAPAuthenticate {
-		caps = append(caps, imap.AUTHPLAIN)
+		caps = append(caps, imap.AUTHPLAIN, imap.SASLIR)
 	}
 
 	return &Session{
@@ -291,12 +306,12 @@ func (s *Session) WriteResponse(res string) error {
 	return nil
 }
 
-func (s *Session) logIncoming(line string) {
+func (s *Session) logIncoming(line []byte) {
 	if s.inLogger == nil {
 		return
 	}
 
-	writeLog(s.inLogger, "C", strconv.Itoa(s.sessionID), line)
+	writeLogBytes(s.inLogger, "C", strconv.Itoa(s.sessionID), line)
 }
 
 func (s *Session) logOutgoing(line string) {
@@ -370,10 +385,10 @@ func (s *Session) decodeMailboxName(name string) (string, error) {
 
 	split := strings.SplitAfterN(name, delimiter, 2)
 	if !strings.EqualFold(split[0], fmt.Sprintf("INBOX%v", delimiter)) || len(split) != 2 {
-		return utf7.Encoding.NewDecoder().String(name)
+		return s.mailboxNameToUTF8(name)
 	}
 
-	return utf7.Encoding.NewDecoder().String(fmt.Sprintf("INBOX%v%v", delimiter, split[1]))
+	return s.mailboxNameToUTF8(fmt.Sprintf("INBOX%v%v", delimiter, split[1]))
 }
 
 func (s *Session) CloseWithBye(reason string) error {

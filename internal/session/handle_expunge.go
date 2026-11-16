@@ -39,7 +39,10 @@ func (s *Session) handleUIDExpunge(ctx context.Context, tag string, cmd *command
 		return nil, ErrReadOnly
 	}
 
-	if err := mailbox.Expunge(ctx, cmd.SeqSet); err != nil {
+	// RFC 9738 counts only the messages marked \Deleted. EXPUNGE without a set is never limited.
+	seqSet, limit := s.limitSeqSet(ctx, mailbox, cmd.SeqSet, true)
+
+	if err := mailbox.Expunge(ctx, seqSet); err != nil {
 		return nil, err
 	}
 
@@ -47,5 +50,5 @@ func (s *Session) handleUIDExpunge(ctx context.Context, tag string, cmd *command
 		return nil, err
 	}
 
-	return response.Ok(tag).WithMessage("EXPUNGE"), nil
+	return response.Ok(tag).WithItems(withItem(nil, limit)...).WithMessage("EXPUNGE"), nil
 }

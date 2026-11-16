@@ -4,8 +4,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/ProtonMail/gluon/connector"
 	"github.com/ProtonMail/gluon/db"
 	"github.com/ProtonMail/gluon/imap"
+	"github.com/ProtonMail/gluon/imap/command"
 )
 
 // Connector interface for State differs slightly from the connector.Connector interface as it needs the ability
@@ -27,11 +29,17 @@ type Connector interface {
 	// CreateMailbox creates a new mailbox with the given name.
 	CreateMailbox(ctx context.Context, tx db.Transaction, name []string) ([]Update, imap.Mailbox, error)
 
+	// CreateSpecialUseMailbox creates a new mailbox with the given name and special-use attributes.
+	CreateSpecialUseMailbox(ctx context.Context, tx db.Transaction, name []string, attributes imap.FlagSet) ([]Update, imap.Mailbox, error)
+
 	// UpdateMailbox sets the name of the mailbox with the given ID to the given new name.
 	UpdateMailbox(ctx context.Context, tx db.Transaction, mboxID imap.MailboxID, newName []string) ([]Update, error)
 
 	// DeleteMailbox deletes the mailbox with the given ID and name.
 	DeleteMailbox(ctx context.Context, tx db.Transaction, mboxID imap.MailboxID) ([]Update, error)
+
+	// SetMailboxSubscribed sets whether the mailbox with the given ID is subscribed.
+	SetMailboxSubscribed(ctx context.Context, tx db.Transaction, mboxID imap.MailboxID, subscribed bool) ([]Update, error)
 
 	// CreateMessage appends a message literal to the mailbox with the given ID.
 	CreateMessage(
@@ -42,6 +50,15 @@ type Connector interface {
 		flags imap.FlagSet,
 		date time.Time,
 	) ([]Update, imap.InternalMessageID, imap.Message, []byte, error)
+
+	// CreateMessages appends several message literals to the mailbox with the given ID. The connector creates all of
+	// them or none.
+	CreateMessages(
+		ctx context.Context,
+		tx db.Transaction,
+		mboxID imap.MailboxID,
+		messages []connector.MessageToCreate,
+	) ([]Update, []imap.InternalMessageID, []imap.Message, [][]byte, error)
 
 	// GetMessageLiteral retrieves the message literal from the connector.
 	// Note: this can get called from different go routines.
@@ -84,10 +101,41 @@ type Connector interface {
 	// SetMessagesForwarded marks the message with the given ID as forwarded.
 	SetMessagesForwarded(ctx context.Context, tx db.Transaction, messageIDs []imap.MessageID, forwarded bool) ([]Update, error)
 
+	// AddOrUpdateMessageFlags adds flags other than \Seen, \Flagged, the forwarded flags and \Recent to messages.
+	AddOrUpdateMessageFlags(ctx context.Context, tx db.Transaction, messageIDs []imap.MessageID, flags imap.FlagSet) ([]Update, error)
+
+	// RemoveMessageFlags removes flags other than \Seen, \Flagged, the forwarded flags and \Recent from messages.
+	RemoveMessageFlags(ctx context.Context, tx db.Transaction, messageIDs []imap.MessageID, flags imap.FlagSet) ([]Update, error)
+
 	// GetQuota returns the quota for the given quota root name.
 	GetQuota(ctx context.Context, rootName string) (*imap.QuotaRoot, error)
 
 	// GetQuotaRoot returns the list of quota root names applicable to the given mailbox,
 	// along with the resource usage for each of those roots.
 	GetQuotaRoot(ctx context.Context, mailboxName string) ([]string, []*imap.QuotaRoot, error)
+
+	// GetMailboxACL returns the rights every identifier has on the mailbox with the given ID.
+	GetMailboxACL(ctx context.Context, mboxID imap.MailboxID) ([]imap.ACLEntry, error)
+
+	// SetMailboxACL gives the identifier exactly the given rights on the mailbox. Empty rights remove the identifier.
+	SetMailboxACL(ctx context.Context, mboxID imap.MailboxID, identifier string, rights string) error
+
+	// ListMailboxRights returns the rights the identifier always has on the mailbox and the rights that can be granted.
+	ListMailboxRights(ctx context.Context, mboxID imap.MailboxID, identifier string) (string, []string, error)
+
+	// GetMyMailboxRights returns the rights the user has on the mailbox.
+	GetMyMailboxRights(ctx context.Context, mboxID imap.MailboxID) (string, error)
+
+	// GetMetadata returns the annotations of the mailbox with the given ID, or of the server for the empty ID.
+	GetMetadata(ctx context.Context, mboxID imap.MailboxID) ([]imap.MetadataEntry, error)
+
+	// SetMetadata changes annotations of the mailbox with the given ID, or of the server for the empty ID.
+	SetMetadata(ctx context.Context, mboxID imap.MailboxID, entries []imap.MetadataEntry) error
+
+	// SetQuotaLimits changes limits of the quota root with the given name and returns the root as it is afterwards.
+	SetQuotaLimits(ctx context.Context, rootName string, limits []imap.QuotaLimit) (*imap.QuotaRoot, error)
+
+	// SearchMessages returns the messages in the mailbox that match every key, or false when the connector
+	// leaves the search to Gluon.
+	SearchMessages(ctx context.Context, mboxID imap.MailboxID, keys []command.SearchKey) ([]imap.MessageID, bool, error)
 }

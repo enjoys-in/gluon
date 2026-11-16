@@ -13,3 +13,7 @@ func (state *State) GetQuota(ctx context.Context, rootName string) (*imap.QuotaR
 func (state *State) GetQuotaRoot(ctx context.Context, mailboxName string) ([]string, []*imap.QuotaRoot, error) {
 	return state.user.GetRemote().GetQuotaRoot(ctx, mailboxName)
 }
+
+func (state *State) SetQuota(ctx context.Context, rootName string, limits []imap.QuotaLimit) (*imap.QuotaRoot, error) {
+	return state.user.GetRemote().SetQuotaLimits(ctx, rootName, limits)
+}

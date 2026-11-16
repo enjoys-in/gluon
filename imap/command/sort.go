@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/ProtonMail/gluon/rfcparser"
@@ -11,7 +12,7 @@ import (
 // SortKey represents a single sort criterion per RFC 5256.
 type SortKey struct {
 	Reverse bool
-	Field   string // "ARRIVAL", "CC", "DATE", "FROM", "SIZE", "SUBJECT", "TO"
+	Field   string // "ARRIVAL", "CC", "DATE", "FROM", "SIZE", "SUBJECT", "TO", "DISPLAYFROM", "DISPLAYTO"
 }
 
 func (s SortKey) String() string {
@@ -27,6 +28,7 @@ type Sort struct {
 	SortKeys []SortKey
 	Charset  string
 	Keys     []SearchKey
+	Return   []SearchReturnOption
 }
 
 func (s Sort) String() string {
@@ -50,8 +52,14 @@ func (SortCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
 	// sort-criteria = "(" sort-criterion *(SP sort-criterion) ")"
 	// sort-criterion = ["REVERSE" SP] sort-key
 	// sort-key = "ARRIVAL" / "CC" / "DATE" / "FROM" / "SIZE" / "SUBJECT" / "TO"
+	// sort-key =/ "DISPLAYFROM" / "DISPLAYTO" (RFC 5957)
 
 	if err := p.Consume(rfcparser.TokenTypeSP, "expected space after SORT"); err != nil {
+		return nil, err
+	}
+
+	returnOpts, err := parseSortReturnOptions(p)
+	if err != nil {
 		return nil, err
 	}
 
@@ -105,7 +113,35 @@ func (SortCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
 		SortKeys: sortKeys,
 		Charset:  charset.Value,
 		Keys:     keys,
+		Return:   returnOpts,
 	}, nil
+}
+
+func parseSortReturnOptions(p *rfcparser.Parser) ([]SearchReturnOption, error) {
+	// RFC 5267 ESORT: sort =/ "SORT" SP "RETURN" SP "(" [search-return-opt *(SP search-return-opt)] ")" SP sort-criteria ...
+	if p.Check(rfcparser.TokenTypeLParen) {
+		return nil, nil
+	}
+
+	keyword, err := readSearchKeyword(p)
+	if err != nil {
+		return nil, err
+	}
+
+	if keyword.Value != "return" {
+		return nil, p.MakeErrorAtOffset("expected '(' for sort criteria", keyword.Offset)
+	}
+
+	opts, err := parseSearchReturnOptions(p)
+	if err != nil {
+		return nil, err
+	}
+
+	if slices.Contains(opts, SearchReturnSave) {
+		return nil, p.MakeErrorAtOffset("SORT cannot save its result", keyword.Offset)
+	}
+
+	return opts, p.Consume(rfcparser.TokenTypeSP, "expected space after return options")
 }
 
 func parseSortCriteria(p *rfcparser.Parser) ([]SortKey, error) {
@@ -165,7 +201,7 @@ func parseSortCriterion(p *rfcparser.Parser) (SortKey, error) {
 	field := strings.ToUpper(keyword.Value)
 
 	switch field {
-	case "ARRIVAL", "CC", "DATE", "FROM", "SIZE", "SUBJECT", "TO":
+	case "ARRIVAL", "CC", "DATE", "FROM", "SIZE", "SUBJECT", "TO", "DISPLAYFROM", "DISPLAYTO":
 		// Valid sort key.
 	default:
 		return SortKey{}, p.MakeErrorAtOffset(fmt.Sprintf("unknown sort key '%v'", field), keyword.Offset)

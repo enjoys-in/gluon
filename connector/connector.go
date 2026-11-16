@@ -6,11 +6,20 @@ import (
 	"time"
 
 	"github.com/ProtonMail/gluon/imap"
+	"github.com/ProtonMail/gluon/imap/command"
 )
 
 var ErrOperationNotAllowed = errors.New("operation not allowed")
 var ErrMessageSizeExceedsLimits = errors.New("message size exceeds limits")
 var ErrOverQuota = errors.New("quota exceeded")
+var ErrSpecialUseNotSupported = errors.New("special use not supported")
+
+// MessageToCreate is one of the messages CreateMessages is asked to create.
+type MessageToCreate struct {
+	Literal []byte
+	Flags   imap.FlagSet
+	Date    time.Time
+}
 
 // Connector connects the gluon server to a remote mail store.
 type Connector interface {
@@ -20,8 +29,18 @@ type Connector interface {
 	// Authorize returns whether the given username/password combination are valid for this connector.
 	Authorize(ctx context.Context, username string, password []byte) bool
 
+	// AuthorizeToken returns whether the given OAuth 2.0 bearer token logs the given user in to this connector. The
+	// username is empty when the client leaves it to the token to name the user. It is only called on a server built
+	// with WithOAuthLogin; a connector without tokens returns false.
+	AuthorizeToken(ctx context.Context, username string, token []byte) bool
+
 	// CreateMailbox creates a mailbox with the given name.
 	CreateMailbox(ctx context.Context, cache IMAPStateWrite, name []string) (imap.Mailbox, error)
+
+	// CreateSpecialUseMailbox creates a mailbox with the given name and special-use attributes, such as imap.AttrSent.
+	// The returned mailbox carries the attributes it was given. A connector that cannot give a mailbox one of the
+	// attributes returns ErrSpecialUseNotSupported and creates nothing.
+	CreateSpecialUseMailbox(ctx context.Context, cache IMAPStateWrite, name []string, attributes imap.FlagSet) (imap.Mailbox, error)
 
 	// GetMessageLiteral is intended to be used by Gluon when, for some reason, the local cached data no longer exists.
 	// Note: this can get called from different go routines.
@@ -36,8 +55,17 @@ type Connector interface {
 	// DeleteMailbox deletes the mailbox with the given ID.
 	DeleteMailbox(ctx context.Context, cache IMAPStateWrite, mboxID imap.MailboxID) error
 
+	// SetMailboxSubscribed sets whether the mailbox with the given ID is subscribed. Returning an error rejects the
+	// change. A connector that does not store subscriptions returns nil and Gluon keeps them.
+	SetMailboxSubscribed(ctx context.Context, cache IMAPStateWrite, mboxID imap.MailboxID, subscribed bool) error
+
 	// CreateMessage creates a new message on the remote.
 	CreateMessage(ctx context.Context, cache IMAPStateWrite, mboxID imap.MailboxID, literal []byte, flags imap.FlagSet, date time.Time) (imap.Message, []byte, error)
+
+	// CreateMessages creates the messages of an APPEND command that carries more than one message. Either all of them
+	// are created or none: when one cannot be created, the connector keeps none of them and returns the error. The
+	// messages and their literals are returned in the order they were given.
+	CreateMessages(ctx context.Context, cache IMAPStateWrite, mboxID imap.MailboxID, messages []MessageToCreate) ([]imap.Message, [][]byte, error)
 
 	// AddMessagesToMailbox adds the given messages to the given mailbox.
 	AddMessagesToMailbox(ctx context.Context, cache IMAPStateWrite, messageIDs []imap.MessageID, mboxID imap.MailboxID) error
@@ -58,12 +86,58 @@ type Connector interface {
 	// MarkMessagesForwarded sets the forwarded value of the give messages.
 	MarkMessagesForwarded(ctx context.Context, cache IMAPStateWrite, messageIDs []imap.MessageID, forwarded bool) error
 
+	// AddOrUpdateMessageFlags adds flags to the given messages. It is called for every flag other than \Seen,
+	// \Flagged and the forwarded flags, which go through MarkMessagesSeen, MarkMessagesFlagged and
+	// MarkMessagesForwarded, and \Recent, which is read-only: system flags such as \Answered, \Deleted and \Draft,
+	// and any keyword a client sets, such as $Important or one of its own. It is called once per flag, with the
+	// messages that did not have it yet; \Deleted is kept per mailbox, so it comes with every message of the command.
+	// Returning an error rejects the change.
+	AddOrUpdateMessageFlags(ctx context.Context, cache IMAPStateWrite, messageIDs []imap.MessageID, flags imap.FlagSet) error
+
+	// RemoveMessageFlags removes flags from the given messages, for the same flags as AddOrUpdateMessageFlags, once
+	// per flag with the messages that had it (every message of the command for \Deleted).
+	RemoveMessageFlags(ctx context.Context, cache IMAPStateWrite, messageIDs []imap.MessageID, flags imap.FlagSet) error
+
 	// GetQuota returns the quota for the given quota root name.
 	GetQuota(ctx context.Context, rootName string) (*imap.QuotaRoot, error)
 
 	// GetQuotaRoot returns the list of quota root names applicable to the given mailbox,
 	// along with the resource usage for each of those roots.
 	GetQuotaRoot(ctx context.Context, mailboxName string) ([]string, []*imap.QuotaRoot, error)
+
+	// GetMailboxACL returns the rights every identifier has on the mailbox with the given ID (RFC 4314). Rights are
+	// the letters of imap.ACLRights.
+	GetMailboxACL(ctx context.Context, mboxID imap.MailboxID) ([]imap.ACLEntry, error)
+
+	// SetMailboxACL gives the identifier exactly the given rights on the mailbox. Empty rights remove the identifier
+	// from the access control list. An error refuses the change.
+	SetMailboxACL(ctx context.Context, mboxID imap.MailboxID, identifier string, rights string) error
+
+	// ListMailboxRights returns the rights the identifier always has on the mailbox, and the rights that can be
+	// granted to it. Rights that can only be granted together are one element.
+	ListMailboxRights(ctx context.Context, mboxID imap.MailboxID, identifier string) (string, []string, error)
+
+	// GetMyMailboxRights returns the rights the user has on the mailbox. A connector without shared mailboxes
+	// returns imap.ACLRights.
+	GetMyMailboxRights(ctx context.Context, mboxID imap.MailboxID) (string, error)
+
+	// GetMetadata returns the annotations of the mailbox with the given ID (RFC 5464). The empty ID stands for the
+	// annotations of the server itself. Gluon picks the entries a client asked for.
+	GetMetadata(ctx context.Context, mboxID imap.MailboxID) ([]imap.MetadataEntry, error)
+
+	// SetMetadata changes annotations of the mailbox with the given ID, or of the server for the empty ID. An entry
+	// with a nil value is removed. Either every entry is changed or none: an entry the connector does not accept is
+	// refused with a MetadataTooBigError, ErrMetadataTooMany or ErrMetadataNoPrivate.
+	SetMetadata(ctx context.Context, mboxID imap.MailboxID, entries []imap.MetadataEntry) error
+
+	// SetQuotaLimits changes limits of the quota root with the given name for SETQUOTA and returns the root as it is
+	// afterwards, which may differ from what was asked when the connector rounds a limit. An error refuses the change:
+	// a connector whose quotas a client may not change returns ErrOperationNotAllowed.
+	SetQuotaLimits(ctx context.Context, rootName string, limits []imap.QuotaLimit) (*imap.QuotaRoot, error)
+
+	// SearchMessages lets the connector answer a search from its own index. It returns the messages in the mailbox
+	// that match every key. Returning false makes Gluon search its own copy of the mailbox instead.
+	SearchMessages(ctx context.Context, mboxID imap.MailboxID, keys []command.SearchKey) ([]imap.MessageID, bool, error)
 
 	// GetUpdates returns a stream of updates that the gluon server should apply.
 	GetUpdates() <-chan imap.Update

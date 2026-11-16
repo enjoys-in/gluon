@@ -7,9 +7,9 @@ import (
 func TestSequenceRange(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t), func(c *testConnection, _ *testSession) {
 		c.C("a001 CREATE mbox1")
-		c.S("a001 OK CREATE")
+		c.Sx(`^a001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 		c.C("a002 CREATE mbox2")
-		c.S("a002 OK CREATE")
+		c.Sx(`^a002 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 		c.C(`A003 SELECT mbox1`)
 		c.Se(`A003 OK [READ-WRITE] SELECT`)
 
@@ -70,9 +70,9 @@ func TestUIDSequenceRange(t *testing.T) {
 		// if no message match the UID sequence set, the operations simply return OK with no untagged response before.
 
 		c.C("a001 CREATE mbox1")
-		c.S("a001 OK CREATE")
+		c.Sx(`^a001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 		c.C("a002 CREATE mbox2")
-		c.S("a002 OK CREATE")
+		c.Sx(`^a002 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 		c.C(`A003 SELECT mbox1`)
 		c.Se(`A003 OK [READ-WRITE] SELECT`)
 

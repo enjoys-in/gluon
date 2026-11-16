@@ -2,11 +2,13 @@ package backend
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ProtonMail/gluon/connector"
 	"github.com/ProtonMail/gluon/db"
 	"github.com/ProtonMail/gluon/imap"
+	"github.com/ProtonMail/gluon/imap/command"
 	"github.com/ProtonMail/gluon/internal/state"
 )
 
@@ -57,6 +59,19 @@ func (sc *stateConnectorImpl) CreateMailbox(ctx context.Context, tx db.Transacti
 	return cache.stateUpdates, mbox, nil
 }
 
+func (sc *stateConnectorImpl) CreateSpecialUseMailbox(ctx context.Context, tx db.Transaction, name []string, attributes imap.FlagSet) ([]state.Update, imap.Mailbox, error) {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	cache := sc.newDBIMAPWrite(tx)
+
+	mbox, err := sc.connector.CreateSpecialUseMailbox(ctx, &cache, name, attributes)
+	if err != nil {
+		return nil, imap.Mailbox{}, err
+	}
+
+	return cache.stateUpdates, mbox, nil
+}
+
 func (sc *stateConnectorImpl) UpdateMailbox(ctx context.Context, tx db.Transaction, mboxID imap.MailboxID, newName []string) ([]state.Update, error) {
 	ctx = sc.newContextWithMetadata(ctx)
 
@@ -81,6 +96,18 @@ func (sc *stateConnectorImpl) DeleteMailbox(ctx context.Context, tx db.Transacti
 	return cache.stateUpdates, nil
 }
 
+func (sc *stateConnectorImpl) SetMailboxSubscribed(ctx context.Context, tx db.Transaction, mboxID imap.MailboxID, subscribed bool) ([]state.Update, error) {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	cache := sc.newDBIMAPWrite(tx)
+
+	if err := sc.connector.SetMailboxSubscribed(ctx, &cache, mboxID, subscribed); err != nil {
+		return nil, err
+	}
+
+	return cache.stateUpdates, nil
+}
+
 func (sc *stateConnectorImpl) CreateMessage(
 	ctx context.Context,
 	tx db.Transaction,
@@ -99,6 +126,34 @@ func (sc *stateConnectorImpl) CreateMessage(
 	}
 
 	return cache.stateUpdates, imap.NewInternalMessageID(), msg, newLiteral, nil
+}
+
+func (sc *stateConnectorImpl) CreateMessages(
+	ctx context.Context,
+	tx db.Transaction,
+	mboxID imap.MailboxID,
+	messages []connector.MessageToCreate,
+) ([]state.Update, []imap.InternalMessageID, []imap.Message, [][]byte, error) {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	cache := sc.newDBIMAPWrite(tx)
+
+	created, literals, err := sc.connector.CreateMessages(ctx, &cache, mboxID, messages)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	if len(created) != len(messages) || len(literals) != len(messages) {
+		return nil, nil, nil, nil, fmt.Errorf("connector created %v of %v messages", len(created), len(messages))
+	}
+
+	internalIDs := make([]imap.InternalMessageID, 0, len(created))
+
+	for range created {
+		internalIDs = append(internalIDs, imap.NewInternalMessageID())
+	}
+
+	return cache.stateUpdates, internalIDs, created, literals, nil
 }
 
 func (sc *stateConnectorImpl) GetMessageLiteral(ctx context.Context, id imap.MessageID) ([]byte, error) {
@@ -186,6 +241,42 @@ func (sc *stateConnectorImpl) SetMessagesFlagged(ctx context.Context,
 	return cache.stateUpdates, nil
 }
 
+func (sc *stateConnectorImpl) AddOrUpdateMessageFlags(ctx context.Context,
+	tx db.Transaction,
+	messageIDs []imap.MessageID, flags imap.FlagSet) ([]state.Update, error) {
+	if len(messageIDs) == 0 || flags.Len() == 0 {
+		return nil, nil
+	}
+
+	ctx = sc.newContextWithMetadata(ctx)
+
+	cache := sc.newDBIMAPWrite(tx)
+
+	if err := sc.connector.AddOrUpdateMessageFlags(ctx, &cache, messageIDs, flags); err != nil {
+		return nil, err
+	}
+
+	return cache.stateUpdates, nil
+}
+
+func (sc *stateConnectorImpl) RemoveMessageFlags(ctx context.Context,
+	tx db.Transaction,
+	messageIDs []imap.MessageID, flags imap.FlagSet) ([]state.Update, error) {
+	if len(messageIDs) == 0 || flags.Len() == 0 {
+		return nil, nil
+	}
+
+	ctx = sc.newContextWithMetadata(ctx)
+
+	cache := sc.newDBIMAPWrite(tx)
+
+	if err := sc.connector.RemoveMessageFlags(ctx, &cache, messageIDs, flags); err != nil {
+		return nil, err
+	}
+
+	return cache.stateUpdates, nil
+}
+
 func (sc *stateConnectorImpl) GetMailboxVisibility(ctx context.Context,
 	id imap.MailboxID) imap.MailboxVisibility {
 	return sc.connector.GetMailboxVisibility(ctx, id)
@@ -238,4 +329,52 @@ func (sc *stateConnectorImpl) GetQuotaRoot(ctx context.Context, mailboxName stri
 	ctx = sc.newContextWithMetadata(ctx)
 
 	return sc.connector.GetQuotaRoot(ctx, mailboxName)
+}
+
+func (sc *stateConnectorImpl) GetMailboxACL(ctx context.Context, mboxID imap.MailboxID) ([]imap.ACLEntry, error) {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	return sc.connector.GetMailboxACL(ctx, mboxID)
+}
+
+func (sc *stateConnectorImpl) SetMailboxACL(ctx context.Context, mboxID imap.MailboxID, identifier string, rights string) error {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	return sc.connector.SetMailboxACL(ctx, mboxID, identifier, rights)
+}
+
+func (sc *stateConnectorImpl) ListMailboxRights(ctx context.Context, mboxID imap.MailboxID, identifier string) (string, []string, error) {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	return sc.connector.ListMailboxRights(ctx, mboxID, identifier)
+}
+
+func (sc *stateConnectorImpl) GetMyMailboxRights(ctx context.Context, mboxID imap.MailboxID) (string, error) {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	return sc.connector.GetMyMailboxRights(ctx, mboxID)
+}
+
+func (sc *stateConnectorImpl) GetMetadata(ctx context.Context, mboxID imap.MailboxID) ([]imap.MetadataEntry, error) {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	return sc.connector.GetMetadata(ctx, mboxID)
+}
+
+func (sc *stateConnectorImpl) SetMetadata(ctx context.Context, mboxID imap.MailboxID, entries []imap.MetadataEntry) error {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	return sc.connector.SetMetadata(ctx, mboxID, entries)
+}
+
+func (sc *stateConnectorImpl) SetQuotaLimits(ctx context.Context, rootName string, limits []imap.QuotaLimit) (*imap.QuotaRoot, error) {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	return sc.connector.SetQuotaLimits(ctx, rootName, limits)
+}
+
+func (sc *stateConnectorImpl) SearchMessages(ctx context.Context, mboxID imap.MailboxID, keys []command.SearchKey) ([]imap.MessageID, bool, error) {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	return sc.connector.SearchMessages(ctx, mboxID, keys)
 }

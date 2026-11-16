@@ -93,6 +93,34 @@ func (u *messageFlagsAddedStateUpdate) String() string {
 		u.flags)
 }
 
+// connectorFlags returns the flags reported through AddOrUpdateMessageFlags and RemoveMessageFlags: all but \Seen,
+// \Flagged and the forwarded flags, which have their own connector calls, and \Recent, which is read-only.
+func connectorFlags(flags imap.FlagSet) imap.FlagSet {
+	return flags.Remove(imap.FlagSeen, imap.FlagFlagged, imap.FlagRecent).Remove(imap.ForwardFlagList...)
+}
+
+// messagesToChange returns the remote IDs of the messages a flag change applies to: those without the flag when it
+// is added, those with it when it is removed. \Deleted is kept per mailbox, not with the message's flags, so it
+// applies to every message.
+func messagesToChange(curFlags []db.MessageFlagSet, flag string, add bool) []imap.MessageID {
+	flagLowerCase := strings.ToLower(flag)
+	perMailbox := flagLowerCase == imap.FlagDeletedLowerCase
+
+	var result []imap.MessageID
+
+	for _, msg := range curFlags {
+		if ids.IsRecoveredRemoteMessageID(msg.RemoteID) {
+			continue
+		}
+
+		if perMailbox || msg.FlagSet.ContainsUnchecked(flagLowerCase) != add {
+			result = append(result, msg.RemoteID)
+		}
+	}
+
+	return result
+}
+
 // applyMessageFlagsAdded adds the flags to the given messages.
 func (state *State) applyMessageFlagsAdded(ctx context.Context,
 	tx db.Transaction,
@@ -160,6 +188,16 @@ func (state *State) applyMessageFlagsAdded(ctx context.Context,
 		return state.user.GetRemote().SetMessagesForwarded(ctx, tx, ids, true)
 	}); err != nil {
 		return nil, err
+	}
+
+	// Every other flag, keywords included, goes to the connector for the messages that do not have it yet.
+	for _, flag := range connectorFlags(addFlags).ToSlice() {
+		updates, err := state.user.GetRemote().AddOrUpdateMessageFlags(ctx, tx, messagesToChange(curFlags, flag, true), imap.NewFlagSet(flag))
+		if err != nil {
+			return nil, err
+		}
+
+		allUpdates = append(allUpdates, updates...)
 	}
 
 	// Add all known variations of forward flags to the list if one of them is present.
@@ -310,6 +348,16 @@ func (state *State) applyMessageFlagsRemoved(ctx context.Context,
 		return nil, err
 	}
 
+	// Every other flag, keywords included, goes to the connector for the messages that have it.
+	for _, flag := range connectorFlags(remFlags).ToSlice() {
+		updates, err := state.user.GetRemote().RemoveMessageFlags(ctx, tx, messagesToChange(curFlags, flag, false), imap.NewFlagSet(flag))
+		if err != nil {
+			return nil, err
+		}
+
+		allUpdates = append(allUpdates, updates...)
+	}
+
 	// Add all known variations of forward flags to the list if one of them is present.
 	if remFlags.ContainsAnyUnchecked(imap.ForwardFlagListLowerCase...) {
 		remFlags.AddToSelf(imap.ForwardFlagList...)
@@ -458,6 +506,34 @@ func (state *State) applyMessageFlagsSet(ctx context.Context,
 		return state.user.GetRemote().SetMessagesForwarded(ctx, tx, messageIDs, b)
 	}); err != nil {
 		return nil, err
+	}
+
+	// Every other flag, keywords included: added where the new set has it and the message does not, removed where
+	// the message has it and the new set does not.
+	changed := connectorFlags(setFlags).Add(imap.FlagDeleted)
+	for _, msg := range curFlags {
+		changed.AddFlagSetToSelf(connectorFlags(msg.FlagSet))
+	}
+
+	for _, flag := range changed.ToSlice() {
+		add := setFlags.ContainsUnchecked(strings.ToLower(flag))
+
+		var (
+			updates []Update
+			err     error
+		)
+
+		if add {
+			updates, err = state.user.GetRemote().AddOrUpdateMessageFlags(ctx, tx, messagesToChange(curFlags, flag, true), imap.NewFlagSet(flag))
+		} else {
+			updates, err = state.user.GetRemote().RemoveMessageFlags(ctx, tx, messagesToChange(curFlags, flag, false), imap.NewFlagSet(flag))
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		allUpdates = append(allUpdates, updates...)
 	}
 
 	// Add all known variations of forward flags to the list if one of them is present.

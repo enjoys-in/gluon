@@ -41,8 +41,8 @@ func TestList(t *testing.T) {
 
 		c.C(`A202 LIST ~/Mail/ %`)
 		c.S(
-			`* LIST (\Noselect) "/" "~/Mail/foo"`,
-			`* LIST (\Unmarked) "/" "~/Mail/meetings"`)
+			`* LIST (\HasChildren \Noselect) "/" "~/Mail/foo"`,
+			`* LIST (\HasNoChildren \Unmarked) "/" "~/Mail/meetings"`)
 		c.OK("A202")
 	})
 }
@@ -58,14 +58,14 @@ func TestListFlagsAndAttributes(t *testing.T) {
 		)
 
 		c.C(`A103 LIST "" *`)
-		c.S(`* LIST (\Unmarked) "/" "INBOX"`,
+		c.S(`* LIST (\HasNoChildren \Unmarked) "/" "INBOX"`,
 			`* LIST (\Noinferiors \Unmarked) "/" "custom-attributes"`)
 		c.OK(`A103`)
 
 		s.messageCreatedFromFile("user", mailboxID, "testdata/multipart-mixed.eml")
 
 		c.C(`A103 LIST "" *`)
-		c.S(`* LIST (\Unmarked) "/" "INBOX"`,
+		c.S(`* LIST (\HasNoChildren \Unmarked) "/" "INBOX"`,
 			`* LIST (\Marked \Noinferiors) "/" "custom-attributes"`)
 		c.OK(`A103`)
 	})
@@ -76,22 +76,22 @@ func TestListRef(t *testing.T) {
 		c.C(`tag create some.thing.else.entirely`).OK(`tag`)
 
 		// No ref - names interpreted like SELECT
-		c.C(`tag list "" some`).S(`* LIST (\Unmarked) "." "some"`).OK(`tag`)
-		c.C(`tag list "" some.thing`).S(`* LIST (\Unmarked) "." "some.thing"`).OK(`tag`)
-		c.C(`tag list "" some.thing.else`).S(`* LIST (\Unmarked) "." "some.thing.else"`).OK(`tag`)
-		c.C(`tag list "" some.thing.else.entirely`).S(`* LIST (\Unmarked) "." "some.thing.else.entirely"`).OK(`tag`)
+		c.C(`tag list "" some`).S(`* LIST (\HasChildren \Unmarked) "." "some"`).OK(`tag`)
+		c.C(`tag list "" some.thing`).S(`* LIST (\HasChildren \Unmarked) "." "some.thing"`).OK(`tag`)
+		c.C(`tag list "" some.thing.else`).S(`* LIST (\HasChildren \Unmarked) "." "some.thing.else"`).OK(`tag`)
+		c.C(`tag list "" some.thing.else.entirely`).S(`* LIST (\HasNoChildren \Unmarked) "." "some.thing.else.entirely"`).OK(`tag`)
 
 		// Level 1 ref
-		c.C(`tag list "some." thing`).S(`* LIST (\Unmarked) "." "some.thing"`).OK(`tag`)
-		c.C(`tag list "some." thing.else`).S(`* LIST (\Unmarked) "." "some.thing.else"`).OK(`tag`)
-		c.C(`tag list "some." thing.else.entirely`).S(`* LIST (\Unmarked) "." "some.thing.else.entirely"`).OK(`tag`)
+		c.C(`tag list "some." thing`).S(`* LIST (\HasChildren \Unmarked) "." "some.thing"`).OK(`tag`)
+		c.C(`tag list "some." thing.else`).S(`* LIST (\HasChildren \Unmarked) "." "some.thing.else"`).OK(`tag`)
+		c.C(`tag list "some." thing.else.entirely`).S(`* LIST (\HasNoChildren \Unmarked) "." "some.thing.else.entirely"`).OK(`tag`)
 
 		// Level 2 ref
-		c.C(`tag list "some.thing." else`).S(`* LIST (\Unmarked) "." "some.thing.else"`).OK(`tag`)
-		c.C(`tag list "some.thing." else.entirely`).S(`* LIST (\Unmarked) "." "some.thing.else.entirely"`).OK(`tag`)
+		c.C(`tag list "some.thing." else`).S(`* LIST (\HasChildren \Unmarked) "." "some.thing.else"`).OK(`tag`)
+		c.C(`tag list "some.thing." else.entirely`).S(`* LIST (\HasNoChildren \Unmarked) "." "some.thing.else.entirely"`).OK(`tag`)
 
 		// Level 3 ref
-		c.C(`tag list "some.thing.else." entirely`).S(`* LIST (\Unmarked) "." "some.thing.else.entirely"`).OK(`tag`)
+		c.C(`tag list "some.thing.else." entirely`).S(`* LIST (\HasNoChildren \Unmarked) "." "some.thing.else.entirely"`).OK(`tag`)
 
 		// Empty ref
 		c.C(`tag list "" ""`).S(`* LIST (\Noselect) "." ""`).OK(`tag`)
@@ -113,28 +113,28 @@ func TestListInbox(t *testing.T) {
 		c.C(`tag create inbox.child`).OK(`tag`)
 
 		// Inbox is matched case-insensitively.
-		c.C(`tag list "" "inbox"`).S(`* LIST (\Unmarked) "." "INBOX"`).OK(`tag`)
-		c.C(`tag list "" "INBOX"`).S(`* LIST (\Unmarked) "." "INBOX"`).OK(`tag`)
-		c.C(`tag list "" "iNbOx"`).S(`* LIST (\Unmarked) "." "INBOX"`).OK(`tag`)
+		c.C(`tag list "" "inbox"`).S(`* LIST (\HasChildren \Unmarked) "." "INBOX"`).OK(`tag`)
+		c.C(`tag list "" "INBOX"`).S(`* LIST (\HasChildren \Unmarked) "." "INBOX"`).OK(`tag`)
+		c.C(`tag list "" "iNbOx"`).S(`* LIST (\HasChildren \Unmarked) "." "INBOX"`).OK(`tag`)
 
 		// Inbox is matched case-insensitively even when it's just part of a path.
-		c.C(`tag list "" "inbox.child"`).S(`* LIST (\Unmarked) "." "INBOX.child"`).OK(`tag`)
-		c.C(`tag list "" "INBOX.child"`).S(`* LIST (\Unmarked) "." "INBOX.child"`).OK(`tag`)
-		c.C(`tag list "" "iNbOx.child"`).S(`* LIST (\Unmarked) "." "INBOX.child"`).OK(`tag`)
+		c.C(`tag list "" "inbox.child"`).S(`* LIST (\HasNoChildren \Unmarked) "." "INBOX.child"`).OK(`tag`)
+		c.C(`tag list "" "INBOX.child"`).S(`* LIST (\HasNoChildren \Unmarked) "." "INBOX.child"`).OK(`tag`)
+		c.C(`tag list "" "iNbOx.child"`).S(`* LIST (\HasNoChildren \Unmarked) "." "INBOX.child"`).OK(`tag`)
 
 		// Inbox is matched case-insensitively when it's split over ref and pattern.
-		c.C(`tag list "inb" "ox"`).S(`* LIST (\Unmarked) "." "INBOX"`).OK(`tag`)
-		c.C(`tag list "INB" "ox"`).S(`* LIST (\Unmarked) "." "INBOX"`).OK(`tag`)
-		c.C(`tag list "inb" "OX"`).S(`* LIST (\Unmarked) "." "INBOX"`).OK(`tag`)
-		c.C(`tag list "INB" "OX"`).S(`* LIST (\Unmarked) "." "INBOX"`).OK(`tag`)
+		c.C(`tag list "inb" "ox"`).S(`* LIST (\HasChildren \Unmarked) "." "INBOX"`).OK(`tag`)
+		c.C(`tag list "INB" "ox"`).S(`* LIST (\HasChildren \Unmarked) "." "INBOX"`).OK(`tag`)
+		c.C(`tag list "inb" "OX"`).S(`* LIST (\HasChildren \Unmarked) "." "INBOX"`).OK(`tag`)
+		c.C(`tag list "INB" "OX"`).S(`* LIST (\HasChildren \Unmarked) "." "INBOX"`).OK(`tag`)
 
 		// Other mailboxes are matched case-sensitively.
-		c.C(`tag list "" "other"`).S(`* LIST (\Unmarked) "." "other"`).OK(`tag`)
+		c.C(`tag list "" "other"`).S(`* LIST (\HasNoChildren \Unmarked) "." "other"`).OK(`tag`)
 		c.C(`tag list "" "OTHER"`).Sx(`OK`)
 		c.C(`tag list "" "oThEr"`).Sx(`OK`)
 
 		// Other mailboxes are matched case-sensitively.
-		c.C(`tag list "" "inboxx"`).S(`* LIST (\Unmarked) "." "inboxx"`).OK(`tag`)
+		c.C(`tag list "" "inboxx"`).S(`* LIST (\HasNoChildren \Unmarked) "." "inboxx"`).OK(`tag`)
 		c.C(`tag list "" "INBOXX"`).Sx(`OK`)
 		c.C(`tag list "" "iNbOxX"`).Sx(`OK`)
 	})
@@ -146,24 +146,24 @@ func TestListRemoved(t *testing.T) {
 		c.C(`tag create foo.bar`).OK(`tag`)
 
 		c.C(`tag list "" "*"`).S(
-			`* LIST (\Unmarked) "." "foo"`,
-			`* LIST (\Unmarked) "." "foo.bar"`,
-			`* LIST (\Unmarked) "." "blurdybloop"`,
-			`* LIST (\Unmarked) "." "INBOX"`,
+			`* LIST (\HasChildren \Unmarked) "." "foo"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "foo.bar"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "blurdybloop"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "INBOX"`,
 		).OK(`tag`)
 
 		c.C(`tag delete blurdybloop`).OK(`tag`)
 		c.C(`tag delete foo`).OK(`tag`)
 
 		c.C(`tag list "" "*"`).S(
-			`* LIST (\Noselect) "." "foo"`,
-			`* LIST (\Unmarked) "." "foo.bar"`,
-			`* LIST (\Unmarked) "." "INBOX"`,
+			`* LIST (\HasChildren \Noselect) "." "foo"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "foo.bar"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "INBOX"`,
 		).OK(`tag`)
 
 		c.C(`tag list "" "%"`).S(
-			`* LIST (\Noselect) "." "foo"`,
-			`* LIST (\Unmarked) "." "INBOX"`,
+			`* LIST (\HasChildren \Noselect) "." "foo"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "INBOX"`,
 		).OK(`tag`)
 	})
 }
@@ -174,16 +174,16 @@ func TestListPanic(t *testing.T) {
 
 		c.C(`S001 list "" "*"`)
 		c.S(
-			`* LIST (\Unmarked) "." "INBOX"`,
-			`* LIST (\Noselect) "." "no-parent"`,
-			`* LIST (\Unmarked) "." "no-parent.just-child"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "INBOX"`,
+			`* LIST (\HasChildren \Noselect) "." "no-parent"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "no-parent.just-child"`,
 		)
 		c.OK(`S001`)
 
 		c.C(`P001 list "" "%"`)
 		c.S(
-			`* LIST (\Unmarked) "." "INBOX"`,
-			`* LIST (\Noselect) "." "no-parent"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "INBOX"`,
+			`* LIST (\HasChildren \Noselect) "." "no-parent"`,
 		)
 		c.OK(`P001`)
 	})
@@ -196,42 +196,42 @@ func TestListWildcards(t *testing.T) {
 
 		c.C(`tag list "" "*"`)
 		c.S(
-			`* LIST (\Unmarked) "." "INBOX"`,
-			`* LIST (\Noselect) "." "some"`,
-			`* LIST (\Unmarked) "." "some.thing"`,
-			`* LIST (\Unmarked) "." "some.thing.else"`,
-			`* LIST (\Unmarked) "." "some.thing.else.entirely"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "INBOX"`,
+			`* LIST (\HasChildren \Noselect) "." "some"`,
+			`* LIST (\HasChildren \Unmarked) "." "some.thing"`,
+			`* LIST (\HasChildren \Unmarked) "." "some.thing.else"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "some.thing.else.entirely"`,
 		)
 		c.OK(`tag`)
 
 		c.C(`tag list "" "%"`)
 		c.S(
-			`* LIST (\Unmarked) "." "INBOX"`,
-			`* LIST (\Noselect) "." "some"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "INBOX"`,
+			`* LIST (\HasChildren \Noselect) "." "some"`,
 		)
 		c.OK(`tag`)
 
 		c.C(`tag list "some.thing" "*"`)
 		c.S(
-			`* LIST (\Unmarked) "." "some.thing"`,
-			`* LIST (\Unmarked) "." "some.thing.else"`,
-			`* LIST (\Unmarked) "." "some.thing.else.entirely"`,
+			`* LIST (\HasChildren \Unmarked) "." "some.thing"`,
+			`* LIST (\HasChildren \Unmarked) "." "some.thing.else"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "some.thing.else.entirely"`,
 		)
 		c.OK(`tag`)
 
 		c.C(`tag list "some.thing" "%"`)
-		c.S(`* LIST (\Unmarked) "." "some.thing"`)
+		c.S(`* LIST (\HasChildren \Unmarked) "." "some.thing"`)
 		c.OK(`tag`)
 
 		c.C(`tag list "some.thing." "*"`)
 		c.S(
-			`* LIST (\Unmarked) "." "some.thing.else"`,
-			`* LIST (\Unmarked) "." "some.thing.else.entirely"`,
+			`* LIST (\HasChildren \Unmarked) "." "some.thing.else"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "some.thing.else.entirely"`,
 		)
 		c.OK(`tag`)
 
 		c.C(`tag list "some.thing." "%"`)
-		c.S(`* LIST (\Unmarked) "." "some.thing.else"`)
+		c.S(`* LIST (\HasChildren \Unmarked) "." "some.thing.else"`)
 		c.OK(`tag`)
 	})
 }
@@ -248,14 +248,14 @@ func TestListSpecialUseAttributes(t *testing.T) {
 
 		c.C(`a list "" "*"`)
 		c.S(
-			`* LIST (\Unmarked) "." "INBOX"`,
-			`* LIST (\Drafts \Unmarked) "." "Koncepty"`,
-			`* LIST (\Sent \Unmarked) "." "Odeslane"`,
-			`* LIST (\Flagged \Unmarked) "." "S hvezdickou"`,
-			`* LIST (\Archive \Unmarked) "." "Archiv"`,
-			`* LIST (\Junk \Unmarked) "." "Spam"`,
-			`* LIST (\Trash \Unmarked) "." "Kos"`,
-			`* LIST (\All \Unmarked) "." "Vsechny zpravy"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "INBOX"`,
+			`* LIST (\Drafts \HasNoChildren \Unmarked) "." "Koncepty"`,
+			`* LIST (\HasNoChildren \Sent \Unmarked) "." "Odeslane"`,
+			`* LIST (\Flagged \HasNoChildren \Unmarked) "." "S hvezdickou"`,
+			`* LIST (\Archive \HasNoChildren \Unmarked) "." "Archiv"`,
+			`* LIST (\HasNoChildren \Junk \Unmarked) "." "Spam"`,
+			`* LIST (\HasNoChildren \Trash \Unmarked) "." "Kos"`,
+			`* LIST (\All \HasNoChildren \Unmarked) "." "Vsechny zpravy"`,
 		)
 		c.OK(`a`)
 	})
@@ -267,8 +267,8 @@ func TestListNilDelimiter(t *testing.T) {
 
 		c.C(`a list "" "*"`)
 		c.S(
-			`* LIST (\Unmarked) NIL "INBOX"`,
-			`* LIST (\Unmarked) NIL "Folders/Custom"`,
+			`* LIST (\HasNoChildren \Unmarked) NIL "INBOX"`,
+			`* LIST (\HasNoChildren \Unmarked) NIL "Folders/Custom"`,
 		)
 		c.OK(`a`)
 	})
@@ -299,11 +299,11 @@ func TestListHiddenMailbox(t *testing.T) {
 
 		c.C(`a list "" "*"`)
 		c.S(
-			`* LIST (\Unmarked) "." "INBOX"`,
-			`* LIST (\Unmarked) "." "Odeslane"`,
-			`* LIST (\Unmarked) "." "Archiv"`,
-			`* LIST (\Unmarked) "." "Kos"`,
-			`* LIST (\Marked) "." "HiddenIfEmpty1"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "INBOX"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "Odeslane"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "Archiv"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "Kos"`,
+			`* LIST (\HasNoChildren \Marked) "." "HiddenIfEmpty1"`,
 		)
 		c.OK(`a`)
 
@@ -312,11 +312,11 @@ func TestListHiddenMailbox(t *testing.T) {
 
 		c.C(`a list "" "*"`)
 		c.S(
-			`* LIST (\Unmarked) "." "INBOX"`,
-			`* LIST (\Unmarked) "." "Odeslane"`,
-			`* LIST (\Unmarked) "." "Archiv"`,
-			`* LIST (\Unmarked) "." "Kos"`,
-			`* LIST (\Marked) "." "HiddenIfEmpty2"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "INBOX"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "Odeslane"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "Archiv"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "Kos"`,
+			`* LIST (\HasNoChildren \Marked) "." "HiddenIfEmpty2"`,
 		)
 		c.OK(`a`)
 	})
@@ -328,8 +328,8 @@ func TestListWithUtf8MailboxNames(t *testing.T) {
 		s.flush("user")
 		c.C(`a list "" "*"`)
 		c.S(
-			`* LIST (\Unmarked) "." "INBOX"`,
-			`* LIST (\Unmarked) "." "mbox-&APYA,ADkAOsA5gD4AOU-"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "INBOX"`,
+			`* LIST (\HasNoChildren \Unmarked) "." "mbox-&APYA,ADkAOsA5gD4AOU-"`,
 		)
 		c.OK(`a`)
 	})

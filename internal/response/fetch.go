@@ -8,6 +8,7 @@ import (
 
 type fetch struct {
 	seq   imap.SeqID
+	uid   imap.UID
 	items []Item
 }
 
@@ -17,12 +18,22 @@ func Fetch(seq imap.SeqID) *fetch {
 	}
 }
 
+// ForUID sets the UID of the message, which names it once the client has enabled UIDONLY.
+func (r *fetch) ForUID(uid imap.UID) *fetch {
+	r.uid = uid
+	return r
+}
+
 func (r *fetch) WithItems(items ...Item) *fetch {
 	r.items = append(r.items, items...)
 	return r
 }
 
 func (r *fetch) Send(s Session) error {
+	if isUIDOnly(s) {
+		return s.WriteResponse(r.uidFetchString())
+	}
+
 	return s.WriteResponse(r.String())
 }
 

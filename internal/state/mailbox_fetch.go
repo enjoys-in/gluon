@@ -93,6 +93,31 @@ func (m *Mailbox) Fetch(ctx context.Context, cmd *command.Fetch, ch chan respons
 			operations = append(operations, fetchBody)
 		case *command.FetchAttributeBodyStructure:
 			operations = append(operations, fetchBodyStructure)
+		case *command.FetchAttributePreview:
+			needsLiteral = true
+
+			operations = append(operations, fetchPreview)
+		case *command.FetchAttributeBinary:
+			needsLiteral = true
+			isBodyFetch = true
+
+			if !attribute.Peek {
+				setSeen = true
+			}
+
+			operations = append(operations, func(_ snapMsgWithSeq, _ *db.Message, fc *fetchContext) (response.Item, error) {
+				return fetchBinary(attribute, fc)
+			})
+		case *command.FetchAttributeBinarySize:
+			needsLiteral = true
+
+			operations = append(operations, func(_ snapMsgWithSeq, _ *db.Message, fc *fetchContext) (response.Item, error) {
+				return fetchBinarySize(attribute, fc)
+			})
+		case *command.FetchAttributeEmailID:
+			operations = append(operations, fetchEmailID)
+		case *command.FetchAttributeThreadID:
+			operations = append(operations, fetchThreadID)
 		case *command.FetchAttributeBodySection:
 			needsLiteral = true
 			isBodyFetch = true
@@ -179,7 +204,7 @@ func (m *Mailbox) Fetch(ctx context.Context, cmd *command.Fetch, ch chan respons
 			m.log.WithField("UID", msg.UID).WithField("messageID", msg.ID.String()).Debug("Fetch Body")
 		}
 
-		ch <- response.Fetch(msg.Seq).WithItems(items...)
+		ch <- response.Fetch(msg.Seq).ForUID(msg.UID).WithItems(items...)
 
 		return nil
 	}); err != nil {

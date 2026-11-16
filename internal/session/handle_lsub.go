@@ -7,7 +7,6 @@ import (
 	"github.com/ProtonMail/gluon/internal/response"
 	"github.com/ProtonMail/gluon/internal/state"
 	"github.com/ProtonMail/gluon/profiling"
-	"github.com/emersion/go-imap/utf7"
 )
 
 func (s *Session) handleLsub(ctx context.Context, tag string, cmd *command.LSub, ch chan response.Response) error {
@@ -21,7 +20,7 @@ func (s *Session) handleLsub(ctx context.Context, tag string, cmd *command.LSub,
 
 	return s.state.List(ctx, cmd.Mailbox, nameUTF8, true, func(matches map[string]state.Match) error {
 		for _, match := range matches {
-			nameUtf7, err := utf7.Encoding.NewEncoder().String(match.Name)
+			nameUtf7, err := s.mailboxNameFromUTF8(match.Name)
 			if err != nil {
 				panic(err)
 			}

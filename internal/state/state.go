@@ -84,40 +84,10 @@ func (state *State) UserID() string {
 
 func (state *State) List(ctx context.Context, ref, pattern string, lsub bool, fn func(map[string]Match) error) error {
 	return stateDBRead(ctx, state, func(ctx context.Context, client db.ReadOnly) error {
-		mailboxes, err := client.GetAllMailboxesWithAttr(ctx)
+		mailboxes, err := state.visibleMailboxes(ctx, client)
 		if err != nil {
 			return err
 		}
-
-		recoveryMailboxID := state.user.GetRecoveryMailboxID().InternalID
-		recoveryMBoxMessageCount, err := client.GetMailboxMessageCount(ctx, recoveryMailboxID)
-		if err != nil {
-			state.log.WithError(err).Error("Failed to get recovery mailbox message count, assuming empty")
-			recoveryMBoxMessageCount = 0
-		}
-
-		mailboxes = utils.Filter(mailboxes, func(mailbox *db.MailboxWithAttr) bool {
-			if mailbox.ID == recoveryMailboxID && recoveryMBoxMessageCount == 0 {
-				return false
-			}
-
-			switch visibility := state.user.GetRemote().GetMailboxVisibility(ctx, mailbox.RemoteID); visibility {
-			case imap.Hidden:
-				return false
-			case imap.Visible:
-				return true
-			case imap.HiddenIfEmpty:
-				count, err := client.GetMailboxMessageCount(ctx, mailbox.ID)
-				if err != nil {
-					state.log.WithError(err).Error("Failed to get recovery mailbox message count, assuming not empty")
-					return true
-				}
-				return count > 0
-			default:
-				state.log.Errorf("Unknown IMAP Mailbox visibility %v", visibility)
-				return true
-			}
-		})
 
 		var deletedSubscriptions map[imap.MailboxID]*db.DeletedSubscription
 
@@ -165,8 +135,50 @@ func (state *State) List(ctx context.Context, ref, pattern string, lsub bool, fn
 			return err
 		}
 
+		// An empty pattern returns the hierarchy root, which is not a mailbox.
+		if !lsub && pattern != "" {
+			addChildAttributes(matches, mailboxes, state.delimiter, nil)
+		}
+
 		return fn(matches)
 	})
+}
+
+func (state *State) visibleMailboxes(ctx context.Context, client db.ReadOnly) ([]*db.MailboxWithAttr, error) {
+	mailboxes, err := client.GetAllMailboxesWithAttr(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	recoveryMailboxID := state.user.GetRecoveryMailboxID().InternalID
+	recoveryMBoxMessageCount, err := client.GetMailboxMessageCount(ctx, recoveryMailboxID)
+	if err != nil {
+		state.log.WithError(err).Error("Failed to get recovery mailbox message count, assuming empty")
+		recoveryMBoxMessageCount = 0
+	}
+
+	return utils.Filter(mailboxes, func(mailbox *db.MailboxWithAttr) bool {
+		if mailbox.ID == recoveryMailboxID && recoveryMBoxMessageCount == 0 {
+			return false
+		}
+
+		switch visibility := state.user.GetRemote().GetMailboxVisibility(ctx, mailbox.RemoteID); visibility {
+		case imap.Hidden:
+			return false
+		case imap.Visible:
+			return true
+		case imap.HiddenIfEmpty:
+			count, err := client.GetMailboxMessageCount(ctx, mailbox.ID)
+			if err != nil {
+				state.log.WithError(err).Error("Failed to get recovery mailbox message count, assuming not empty")
+				return true
+			}
+			return count > 0
+		default:
+			state.log.Errorf("Unknown IMAP Mailbox visibility %v", visibility)
+			return true
+		}
+	}), nil
 }
 
 func (state *State) Select(ctx context.Context, name string, fn func(*Mailbox) error) error {
@@ -238,6 +250,11 @@ func (state *State) Examine(ctx context.Context, name string, fn func(*Mailbox) 
 }
 
 func (state *State) Create(ctx context.Context, name string) error {
+	return state.CreateSpecialUse(ctx, name, nil)
+}
+
+// CreateSpecialUse creates the mailbox with the given special-use attributes. Mailboxes created above it get none.
+func (state *State) CreateSpecialUse(ctx context.Context, name string, attributes imap.FlagSet) error {
 	uidValidity, err := state.user.GenerateUIDValidity()
 	if err != nil {
 		return err
@@ -296,7 +313,17 @@ func (state *State) Create(ctx context.Context, name string) error {
 		var allUpdates []Update
 
 		for _, mboxName := range mboxesToCreate {
-			updates, err := state.actionCreateMailbox(ctx, tx, mboxName, uidValidity)
+			var (
+				updates []Update
+				err     error
+			)
+
+			if mboxName == name && attributes.Len() > 0 {
+				updates, err = state.actionCreateSpecialUseMailbox(ctx, tx, mboxName, attributes, uidValidity)
+			} else {
+				updates, err = state.actionCreateMailbox(ctx, tx, mboxName, uidValidity)
+			}
+
 			if err != nil {
 				return nil, err
 			}
@@ -456,7 +483,12 @@ func (state *State) Subscribe(ctx context.Context, name string) error {
 			return nil, ErrAlreadySubscribed
 		}
 
-		return nil, tx.SetMailboxSubscribed(ctx, mbox.ID, true)
+		updates, err := state.setRemoteMailboxSubscribed(ctx, tx, mbox, true)
+		if err != nil {
+			return nil, err
+		}
+
+		return updates, tx.SetMailboxSubscribed(ctx, mbox.ID, true)
 	})
 }
 
@@ -478,8 +510,22 @@ func (state *State) Unsubscribe(ctx context.Context, name string) error {
 			return nil, ErrAlreadyUnsubscribed
 		}
 
-		return nil, tx.SetMailboxSubscribed(ctx, mbox.ID, false)
+		updates, err := state.setRemoteMailboxSubscribed(ctx, tx, mbox, false)
+		if err != nil {
+			return nil, err
+		}
+
+		return updates, tx.SetMailboxSubscribed(ctx, mbox.ID, false)
 	})
+}
+
+// setRemoteMailboxSubscribed tells the connector about the subscription. The recovery mailbox only exists in Gluon.
+func (state *State) setRemoteMailboxSubscribed(ctx context.Context, tx db.Transaction, mbox *db.Mailbox, subscribed bool) ([]Update, error) {
+	if mbox.ID == state.user.GetRecoveryMailboxID().InternalID {
+		return nil, nil
+	}
+
+	return state.user.GetRemote().SetMailboxSubscribed(ctx, tx, mbox.RemoteID, subscribed)
 }
 
 func (state *State) Idle(ctx context.Context, fn func([]response.Response, chan response.Response) error) error {

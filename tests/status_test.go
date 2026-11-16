@@ -7,7 +7,7 @@ import (
 func TestStatus(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t, withDelimiter(".")), func(c *testConnection, _ *testSession) {
 		c.C("B001 CREATE blurdybloop")
-		c.S("B001 OK CREATE")
+		c.Sx(`^B001 OK \[MAILBOXID \([\w-]+\)\] CREATE`)
 
 		c.doAppend(`blurdybloop`, buildRFC5322TestLiteral(`To: 1@pm.me`), `\Seen`).expect("OK")
 		c.doAppend(`blurdybloop`, buildRFC5322TestLiteral(`To: 2@pm.me`)).expect("OK")

@@ -220,14 +220,14 @@ func TestMessageRemovedUpdateRepeated(t *testing.T) {
 func TestMailboxCreatedUpdate(t *testing.T) {
 	runOneToOneTestWithAuth(t, defaultServerOptions(t), func(c *testConnection, s *testSession) {
 		c.C(`A82 LIST "" *`)
-		c.S(`* LIST (\Unmarked) "/" "INBOX"`)
+		c.S(`* LIST (\HasNoChildren \Unmarked) "/" "INBOX"`)
 		c.OK("A82")
 
 		s.mailboxCreated("user", []string{"some-mailbox"})
 
 		c.C(`A82 LIST "" *`)
-		c.S(`* LIST (\Unmarked) "/" "some-mailbox"`,
-			`* LIST (\Unmarked) "/" "INBOX"`)
+		c.S(`* LIST (\HasNoChildren \Unmarked) "/" "some-mailbox"`,
+			`* LIST (\HasNoChildren \Unmarked) "/" "INBOX"`)
 		c.OK("A82")
 	})
 }
