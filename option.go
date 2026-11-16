@@ -234,6 +234,18 @@ func WithDisableIMAPAuthenticate() Option {
 	return &withDisableIMAPAuthenticate{}
 }
 
+type withDisableIMAPUnauthenticate struct{}
+
+func (withDisableIMAPUnauthenticate) config(builder *serverBuilder) {
+	builder.disableUnauthenticate = true
+}
+
+// WithDisableIMAPUnauthenticate disables the IMAP UNAUTHENTICATE command, with which a client returns its connection
+// to the not authenticated state to log in again.
+func WithDisableIMAPUnauthenticate() Option {
+	return &withDisableIMAPUnauthenticate{}
+}
+
 type withOAuthLogin struct{}
 
 func (withOAuthLogin) config(builder *serverBuilder) {

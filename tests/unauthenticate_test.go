@@ -2,6 +2,8 @@ package tests
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestUnauthenticate(t *testing.T) {
@@ -15,7 +17,7 @@ func TestUnauthenticate(t *testing.T) {
 		// The session is back in the not authenticated state.
 		c.C("A004 SELECT Work").NO("A004")
 		c.C("A005 FETCH 1 (FLAGS)").NO("A005")
-		c.C("A006 UNAUTHENTICATE").NO("A006")
+		c.C("A006 UNAUTHENTICATE").BAD("A006")
 
 		c.C("A007 CAPABILITY")
 		c.S(`* CAPABILITY AUTH=PLAIN ID IDLE IMAP4rev1 LITERAL+ SASL-IR STARTTLS`)
@@ -59,7 +61,8 @@ func TestUnauthenticateKeepsOtherSessions(t *testing.T) {
 
 func TestUnauthenticateBeforeLogin(t *testing.T) {
 	runOneToOneTest(t, defaultServerOptions(t), func(c *testConnection, _ *testSession) {
-		c.C("A001 UNAUTHENTICATE").NO("A001")
+		// RFC 8437 does not permit NO: the command is not valid here, which is answered with BAD.
+		c.C("A001 UNAUTHENTICATE").BAD("A001")
 		c.C("A002 LOGIN user pass").OK("A002")
 	})
 }
@@ -82,5 +85,28 @@ func TestUnauthenticateAdvertisedAfterLogin(t *testing.T) {
 		c.C("A003 CAPABILITY")
 		c.Sx(`\* CAPABILITY .* UNAUTHENTICATE`)
 		c.OK("A003")
+	})
+}
+
+type disableUnauthenticateOption struct{}
+
+func (disableUnauthenticateOption) apply(options *serverOptions) {
+	options.disableUnauthenticate = true
+}
+
+func TestUnauthenticateCanBeDisabled(t *testing.T) {
+	runOneToOneTestWithAuth(t, defaultServerOptions(t, disableUnauthenticateOption{}), func(c *testConnection, _ *testSession) {
+		c.C("A001 CAPABILITY")
+
+		capabilities := string(c.read())
+		require.Contains(t, capabilities, "UIDPLUS")
+		require.NotContains(t, capabilities, "UNAUTHENTICATE")
+
+		c.OK("A001")
+
+		c.C("A002 UNAUTHENTICATE").BAD("A002")
+
+		// The session is still logged in.
+		c.C("A003 SELECT INBOX").OK("A003")
 	})
 }

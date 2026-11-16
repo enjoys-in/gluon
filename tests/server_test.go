@@ -83,6 +83,7 @@ type serverOptions struct {
 	database                db.ClientInterface
 	loggerIn, loggerOut     io.Writer
 	oauthLogin              bool
+	disableUnauthenticate   bool
 }
 
 func (s *serverOptions) defaultUsername() string {
@@ -343,6 +344,10 @@ func runServer(tb testing.TB, options *serverOptions, tests func(session *testSe
 
 	if options.oauthLogin {
 		gluonOptions = append(gluonOptions, gluon.WithOAuthLogin())
+	}
+
+	if options.disableUnauthenticate {
+		gluonOptions = append(gluonOptions, gluon.WithDisableIMAPUnauthenticate())
 	}
 
 	// Create a new gluon server.

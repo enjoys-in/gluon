@@ -96,6 +96,9 @@ type Server struct {
 	// oauthLogin lets clients log in with an OAuth 2.0 bearer token (AUTHENTICATE OAUTHBEARER and XOAUTH2).
 	oauthLogin bool
 
+	// disableUnauthenticate disables the IMAP UNAUTHENTICATE command.
+	disableUnauthenticate bool
+
 	uidValidityGenerator imap.UIDValidityGenerator
 
 	panicHandler async.PanicHandler
@@ -396,6 +399,10 @@ func (s *Server) addSession(ctx context.Context, conn net.Conn) (*session.Sessio
 
 	if s.oauthLogin {
 		s.sessions[nextID].SetBearerAuthentication()
+	}
+
+	if s.disableUnauthenticate {
+		s.sessions[nextID].DisableUnauthenticate()
 	}
 
 	s.publish(events.SessionAdded{

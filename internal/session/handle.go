@@ -54,7 +54,8 @@ func (s *Session) handleCommand(
 		*command.Capability,
 		*command.IDGet,
 		*command.IDSet,
-		*command.Noop:
+		*command.Noop,
+		*command.Unauthenticate:
 		return s.handleAnyCommand(ctx, tag, cmd, ch)
 
 	case
@@ -85,8 +86,7 @@ func (s *Session) handleCommand(
 		*command.MyRights,
 		*command.SetMetadata,
 		*command.GetMetadata,
-		*command.Namespace,
-		*command.Unauthenticate:
+		*command.Namespace:
 		return s.handleAuthenticatedCommand(ctx, tag, cmd, ch)
 	case
 		*command.Check,
@@ -132,6 +132,10 @@ func (s *Session) handleAnyCommand(
 	case *command.IDGet:
 		// RFC 2971 ID
 		return s.handleIDGet(ctx, tag, ch)
+
+	case *command.Unauthenticate:
+		// RFC 8437 UNAUTHENTICATE Command
+		return s.handleUnauthenticate(ctx, tag, cmd, ch)
 
 	default:
 		return fmt.Errorf("bad command")
@@ -261,10 +265,6 @@ func (s *Session) handleAuthenticatedCommand(
 	case *command.Namespace:
 		// RFC 2342 NAMESPACE Command
 		return s.handleNamespace(ctx, tag, cmd, ch)
-
-	case *command.Unauthenticate:
-		// RFC 8437 UNAUTHENTICATE Command
-		return s.handleUnauthenticate(ctx, tag, cmd, ch)
 
 	default:
 		return fmt.Errorf("bad command")
