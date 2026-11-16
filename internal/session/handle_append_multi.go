@@ -14,6 +14,11 @@ import (
 // handleMultiAppend handles an APPEND command with several messages (RFC 3502). Every message is checked before
 // any of them is appended.
 func (s *Session) handleMultiAppend(ctx context.Context, tag string, cmd *command.Append, nameUTF8 string, ch chan response.Response) error {
+	// RFC 9738: the messages are appended together, so too many of them fail the whole command.
+	if s.messageLimit > 0 && len(cmd.More) >= s.messageLimit {
+		return response.No(tag).WithError(ErrTooManyMessages).WithItems(response.ItemMessageLimit(s.messageLimit, 0))
+	}
+
 	messages := make([]connector.MessageToCreate, 0, len(cmd.More)+1)
 
 	for _, message := range cmd.Messages() {

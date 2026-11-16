@@ -612,6 +612,9 @@ func handleSearchKey(keyword rfcparser.String, p *rfcparser.Parser, depth int) (
 
 		return &SearchKeyUID{SeqSet: value}, nil
 
+	case "uidafter", "uidbefore":
+		return parseSearchKeyUIDBound(p, keyword.Value == "uidafter")
+
 	case "undraft":
 		return &SearchKeyUndraft{}, nil
 

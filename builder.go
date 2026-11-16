@@ -43,6 +43,7 @@ type serverBuilder struct {
 	disableIMAPAuthenticate  bool
 	oauthLogin               bool
 	disableUnauthenticate    bool
+	messageLimit             int
 	uidValidityGenerator     imap.UIDValidityGenerator
 	panicHandler             async.PanicHandler
 	dbCI                     db.ClientInterface
@@ -142,6 +143,7 @@ func (builder *serverBuilder) build() (*Server, error) {
 		disableIMAPAuthenticate:  builder.disableIMAPAuthenticate,
 		oauthLogin:               builder.oauthLogin,
 		disableUnauthenticate:    builder.disableUnauthenticate,
+		messageLimit:             builder.messageLimit,
 		uidValidityGenerator:     builder.uidValidityGenerator,
 		panicHandler:             builder.panicHandler,
 		observabilitySender:      builder.observabilitySender,

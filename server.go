@@ -99,6 +99,9 @@ type Server struct {
 	// disableUnauthenticate disables the IMAP UNAUTHENTICATE command.
 	disableUnauthenticate bool
 
+	// messageLimit is the most messages one IMAP command processes (RFC 9738). Zero means no limit.
+	messageLimit int
+
 	uidValidityGenerator imap.UIDValidityGenerator
 
 	panicHandler async.PanicHandler
@@ -403,6 +406,10 @@ func (s *Server) addSession(ctx context.Context, conn net.Conn) (*session.Sessio
 
 	if s.disableUnauthenticate {
 		s.sessions[nextID].DisableUnauthenticate()
+	}
+
+	if s.messageLimit > 0 {
+		s.sessions[nextID].SetMessageLimit(s.messageLimit)
 	}
 
 	s.publish(events.SessionAdded{

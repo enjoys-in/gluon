@@ -84,6 +84,7 @@ type serverOptions struct {
 	loggerIn, loggerOut     io.Writer
 	oauthLogin              bool
 	disableUnauthenticate   bool
+	messageLimit            int
 }
 
 func (s *serverOptions) defaultUsername() string {
@@ -348,6 +349,10 @@ func runServer(tb testing.TB, options *serverOptions, tests func(session *testSe
 
 	if options.disableUnauthenticate {
 		gluonOptions = append(gluonOptions, gluon.WithDisableIMAPUnauthenticate())
+	}
+
+	if options.messageLimit > 0 {
+		gluonOptions = append(gluonOptions, gluon.WithMessageLimit(options.messageLimit))
 	}
 
 	// Create a new gluon server.

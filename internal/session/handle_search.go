@@ -40,7 +40,7 @@ func (s *Session) handleSearch(ctx context.Context, tag string, cmd *command.Sea
 		decoder = encoding.Nop.NewDecoder()
 	}
 
-	seq, err := search(ctx, cmd, mailbox, decoder)
+	seq, limit, err := s.search(ctx, cmd, mailbox, decoder)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (s *Session) handleSearch(ctx context.Context, tag string, cmd *command.Sea
 		}
 	}
 
-	var items []response.Item
+	items := withItem(nil, limit)
 
 	if mailbox.ExpungeIssued() {
 		items = append(items, response.ItemExpungeIssued())
@@ -65,15 +65,21 @@ func (s *Session) handleSearch(ctx context.Context, tag string, cmd *command.Sea
 		WithMessage(okMessage(ctx)), nil
 }
 
-func search(ctx context.Context, cmd *command.Search, mailbox *state.Mailbox, decoder *encoding.Decoder) ([]uint32, error) {
+func (s *Session) search(ctx context.Context, cmd *command.Search, mailbox *state.Mailbox, decoder *encoding.Decoder) ([]uint32, response.Item, error) {
 	seq, err := searchMessages(ctx, cmd, mailbox, decoder)
+
+	// RFC 9738: what the search found is cut to the message limit, and so is what "$" stands for.
+	var limit response.Item
+	if err == nil {
+		seq, limit = s.limitSearchResult(ctx, mailbox, seq)
+	}
 
 	// RFC 5182 SEARCHRES Extension: a search that fails leaves an empty result behind.
 	if slices.Contains(cmd.Return, command.SearchReturnSave) {
 		mailbox.SaveSearchResult(ctx, searchResultToSave(cmd.Return, seq))
 	}
 
-	return seq, err
+	return seq, limit, err
 }
 
 func searchMessages(ctx context.Context, cmd *command.Search, mailbox *state.Mailbox, decoder *encoding.Decoder) ([]uint32, error) {

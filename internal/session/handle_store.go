@@ -35,7 +35,9 @@ func (s *Session) handleStore(ctx context.Context, tag string, cmd *command.Stor
 		return response.Bad(tag).WithError(err), nil
 	}
 
-	if err := mailbox.Store(ctx, cmd.SeqSet, cmd.Action, flags); errors.Is(err, state.ErrNoSuchMessage) {
+	seqSet, limit := s.limitSeqSet(ctx, mailbox, cmd.SeqSet, false)
+
+	if err := mailbox.Store(ctx, seqSet, cmd.Action, flags); errors.Is(err, state.ErrNoSuchMessage) {
 		return response.Bad(tag).WithError(err), nil
 	} else if err != nil {
 		// A result of either a failed request (API unreachable), or the message does not exist on remote.
@@ -48,7 +50,7 @@ func (s *Session) handleStore(ctx context.Context, tag string, cmd *command.Stor
 		return nil, err
 	}
 
-	var items []response.Item
+	items := withItem(nil, limit)
 
 	if mailbox.ExpungeIssued() {
 		items = append(items, response.ItemExpungeIssued())

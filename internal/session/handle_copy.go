@@ -34,6 +34,11 @@ func (s *Session) handleCopy(ctx context.Context, tag string, cmd *command.Copy,
 		return nil, err
 	}
 
+	// RFC 9738: a COPY is atomic, so one that is over the limit fails instead of copying some of the messages.
+	if _, limit := s.limitSeqSet(ctx, mailbox, cmd.SeqSet, false); limit != nil {
+		return response.No(tag).WithError(ErrTooManyMessages).WithItems(response.ItemMessageLimit(s.messageLimit, 0)), nil
+	}
+
 	item, err := mailbox.Copy(ctx, cmd.SeqSet, nameUTF8)
 	if errors.Is(err, state.ErrNoSuchMessage) {
 		return response.Bad(tag).WithError(err), nil

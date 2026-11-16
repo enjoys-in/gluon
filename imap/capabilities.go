@@ -42,6 +42,7 @@ const (
 	BINARY           Capability = `BINARY`
 	ENABLE           Capability = `ENABLE`
 	UTF8Accept       Capability = `UTF8=ACCEPT`
+	MessageLimit     Capability = `MESSAGELIMIT`
 )
 
 func IsCapabilityAvailableBeforeAuth(c Capability) bool {

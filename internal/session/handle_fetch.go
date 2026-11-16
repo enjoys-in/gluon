@@ -21,7 +21,13 @@ func (s *Session) handleFetch(ctx context.Context, tag string, cmd *command.Fetc
 		defer profiling.Stop(ctx, profiling.CmdTypeFetch)
 	}
 
-	if err := mailbox.Fetch(ctx, cmd, ch); errors.Is(err, state.ErrNoSuchMessage) {
+	limited := *cmd
+
+	var limit response.Item
+
+	limited.SeqSet, limit = s.limitSeqSet(ctx, mailbox, cmd.SeqSet, false)
+
+	if err := mailbox.Fetch(ctx, &limited, ch); errors.Is(err, state.ErrNoSuchMessage) {
 		return response.Bad(tag).WithError(err), nil
 	} else if errors.Is(err, state.ErrUnknownCTE) {
 		return nil, response.No(tag).WithError(err).WithItems(response.ItemUnknownCTE())
@@ -37,7 +43,7 @@ func (s *Session) handleFetch(ctx context.Context, tag string, cmd *command.Fetc
 		return nil, err
 	}
 
-	var items []response.Item
+	items := withItem(nil, limit)
 
 	if mailbox.ExpungeIssued() {
 		items = append(items, response.ItemExpungeIssued())

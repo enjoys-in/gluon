@@ -246,6 +246,22 @@ func WithDisableIMAPUnauthenticate() Option {
 	return &withDisableIMAPUnauthenticate{}
 }
 
+type withMessageLimit struct {
+	limit int
+}
+
+func (opt withMessageLimit) config(builder *serverBuilder) {
+	builder.messageLimit = opt.limit
+}
+
+// WithMessageLimit limits how many messages one IMAP command processes and advertises the limit as MESSAGELIMIT
+// (RFC 9738). SEARCH, FETCH, STORE, MOVE and UID EXPUNGE then work on the messages with the highest UIDs and tell the
+// client where they stopped; COPY and an APPEND of several messages that are over the limit fail. Clients that do not
+// know the extension only see the newest messages, so it is off by default. The RFC asks for a limit of at least 1000.
+func WithMessageLimit(limit int) Option {
+	return &withMessageLimit{limit: limit}
+}
+
 type withOAuthLogin struct{}
 
 func (withOAuthLogin) config(builder *serverBuilder) {

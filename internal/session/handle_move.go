@@ -32,7 +32,9 @@ func (s *Session) handleMove(ctx context.Context, tag string, cmd *command.Move,
 		return nil, ErrReadOnly
 	}
 
-	item, err := mailbox.Move(ctx, cmd.SeqSet, nameUTF8)
+	seqSet, limit := s.limitSeqSet(ctx, mailbox, cmd.SeqSet, false)
+
+	item, err := mailbox.Move(ctx, seqSet, nameUTF8)
 	if errors.Is(err, state.ErrNoSuchMessage) {
 		return response.Bad(tag).WithError(err), nil
 	} else if errors.Is(err, state.ErrNoSuchMailbox) {
@@ -52,5 +54,5 @@ func (s *Session) handleMove(ctx context.Context, tag string, cmd *command.Move,
 		return nil, err
 	}
 
-	return response.Ok(tag).WithMessage(okMessage(ctx)), nil
+	return response.Ok(tag).WithItems(withItem(nil, limit)...).WithMessage(okMessage(ctx)), nil
 }

@@ -96,6 +96,9 @@ type Session struct {
 	// unauthenticateDisabled disables the IMAP UNAUTHENTICATE command.
 	unauthenticateDisabled bool
 
+	// messageLimit is the most messages one command processes (RFC 9738). Zero means no limit.
+	messageLimit int
+
 	// utf8Enabled is set once the client has enabled UTF8=ACCEPT: mailbox names are then UTF-8 in both directions.
 	utf8Enabled bool
 
