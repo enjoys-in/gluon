@@ -241,6 +241,42 @@ func (sc *stateConnectorImpl) SetMessagesFlagged(ctx context.Context,
 	return cache.stateUpdates, nil
 }
 
+func (sc *stateConnectorImpl) AddOrUpdateMessageFlags(ctx context.Context,
+	tx db.Transaction,
+	messageIDs []imap.MessageID, flags imap.FlagSet) ([]state.Update, error) {
+	if len(messageIDs) == 0 || flags.Len() == 0 {
+		return nil, nil
+	}
+
+	ctx = sc.newContextWithMetadata(ctx)
+
+	cache := sc.newDBIMAPWrite(tx)
+
+	if err := sc.connector.AddOrUpdateMessageFlags(ctx, &cache, messageIDs, flags); err != nil {
+		return nil, err
+	}
+
+	return cache.stateUpdates, nil
+}
+
+func (sc *stateConnectorImpl) RemoveMessageFlags(ctx context.Context,
+	tx db.Transaction,
+	messageIDs []imap.MessageID, flags imap.FlagSet) ([]state.Update, error) {
+	if len(messageIDs) == 0 || flags.Len() == 0 {
+		return nil, nil
+	}
+
+	ctx = sc.newContextWithMetadata(ctx)
+
+	cache := sc.newDBIMAPWrite(tx)
+
+	if err := sc.connector.RemoveMessageFlags(ctx, &cache, messageIDs, flags); err != nil {
+		return nil, err
+	}
+
+	return cache.stateUpdates, nil
+}
+
 func (sc *stateConnectorImpl) GetMailboxVisibility(ctx context.Context,
 	id imap.MailboxID) imap.MailboxVisibility {
 	return sc.connector.GetMailboxVisibility(ctx, id)

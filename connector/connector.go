@@ -86,6 +86,18 @@ type Connector interface {
 	// MarkMessagesForwarded sets the forwarded value of the give messages.
 	MarkMessagesForwarded(ctx context.Context, cache IMAPStateWrite, messageIDs []imap.MessageID, forwarded bool) error
 
+	// AddOrUpdateMessageFlags adds flags to the given messages. It is called for every flag other than \Seen,
+	// \Flagged and the forwarded flags, which go through MarkMessagesSeen, MarkMessagesFlagged and
+	// MarkMessagesForwarded, and \Recent, which is read-only: system flags such as \Answered, \Deleted and \Draft,
+	// and any keyword a client sets, such as $Important or one of its own. It is called once per flag, with the
+	// messages that did not have it yet; \Deleted is kept per mailbox, so it comes with every message of the command.
+	// Returning an error rejects the change.
+	AddOrUpdateMessageFlags(ctx context.Context, cache IMAPStateWrite, messageIDs []imap.MessageID, flags imap.FlagSet) error
+
+	// RemoveMessageFlags removes flags from the given messages, for the same flags as AddOrUpdateMessageFlags, once
+	// per flag with the messages that had it (every message of the command for \Deleted).
+	RemoveMessageFlags(ctx context.Context, cache IMAPStateWrite, messageIDs []imap.MessageID, flags imap.FlagSet) error
+
 	// GetQuota returns the quota for the given quota root name.
 	GetQuota(ctx context.Context, rootName string) (*imap.QuotaRoot, error)
 

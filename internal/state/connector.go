@@ -101,6 +101,12 @@ type Connector interface {
 	// SetMessagesForwarded marks the message with the given ID as forwarded.
 	SetMessagesForwarded(ctx context.Context, tx db.Transaction, messageIDs []imap.MessageID, forwarded bool) ([]Update, error)
 
+	// AddOrUpdateMessageFlags adds flags other than \Seen, \Flagged, the forwarded flags and \Recent to messages.
+	AddOrUpdateMessageFlags(ctx context.Context, tx db.Transaction, messageIDs []imap.MessageID, flags imap.FlagSet) ([]Update, error)
+
+	// RemoveMessageFlags removes flags other than \Seen, \Flagged, the forwarded flags and \Recent from messages.
+	RemoveMessageFlags(ctx context.Context, tx db.Transaction, messageIDs []imap.MessageID, flags imap.FlagSet) ([]Update, error)
+
 	// GetQuota returns the quota for the given quota root name.
 	GetQuota(ctx context.Context, rootName string) (*imap.QuotaRoot, error)
 

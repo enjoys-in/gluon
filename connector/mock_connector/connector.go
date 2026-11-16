@@ -412,6 +412,34 @@ func (mr *MockConnectorMockRecorder) MarkMessagesFlagged(ctx, cache, messageIDs,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkMessagesFlagged", reflect.TypeOf((*MockConnector)(nil).MarkMessagesFlagged), ctx, cache, messageIDs, flagged)
 }
 
+// AddOrUpdateMessageFlags mocks base method.
+func (m *MockConnector) AddOrUpdateMessageFlags(ctx context.Context, cache connector.IMAPStateWrite, messageIDs []imap.MessageID, flags imap.FlagSet) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddOrUpdateMessageFlags", ctx, cache, messageIDs, flags)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddOrUpdateMessageFlags indicates an expected call of AddOrUpdateMessageFlags.
+func (mr *MockConnectorMockRecorder) AddOrUpdateMessageFlags(ctx, cache, messageIDs, flags any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddOrUpdateMessageFlags", reflect.TypeOf((*MockConnector)(nil).AddOrUpdateMessageFlags), ctx, cache, messageIDs, flags)
+}
+
+// RemoveMessageFlags mocks base method.
+func (m *MockConnector) RemoveMessageFlags(ctx context.Context, cache connector.IMAPStateWrite, messageIDs []imap.MessageID, flags imap.FlagSet) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveMessageFlags", ctx, cache, messageIDs, flags)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveMessageFlags indicates an expected call of RemoveMessageFlags.
+func (mr *MockConnectorMockRecorder) RemoveMessageFlags(ctx, cache, messageIDs, flags any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveMessageFlags", reflect.TypeOf((*MockConnector)(nil).RemoveMessageFlags), ctx, cache, messageIDs, flags)
+}
+
 // MarkMessagesForwarded mocks base method.
 func (m *MockConnector) MarkMessagesForwarded(ctx context.Context, cache connector.IMAPStateWrite, messageIDs []imap.MessageID, forwarded bool) error {
 	m.ctrl.T.Helper()
