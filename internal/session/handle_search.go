@@ -24,6 +24,11 @@ func (s *Session) handleSearch(ctx context.Context, tag string, cmd *command.Sea
 
 	var decoder *encoding.Decoder
 
+	// RFC 6855: a client that has enabled UTF8=ACCEPT must not name a charset.
+	if s.utf8Enabled && len(cmd.Charset) != 0 {
+		return nil, response.Bad(tag).WithError(ErrCharsetWithUTF8)
+	}
+
 	if len(cmd.Charset) != 0 {
 		encoding, err := ianaindex.IANA.Encoding(cmd.Charset)
 		if err != nil {

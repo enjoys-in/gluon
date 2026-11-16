@@ -116,18 +116,3 @@ func handleBinaryFetchAttribute(p *rfcparser.Parser) (FetchAttribute, error) {
 
 	return binary, nil
 }
-
-// parseAppendLiteral reads the message of an APPEND command: a literal, or a binary literal "~{n}" for a message
-// with binary content (RFC 3516).
-func parseAppendLiteral(p *rfcparser.Parser) ([]byte, error) {
-	if _, err := p.Matches(rfcparser.TokenTypeTilde); err != nil {
-		return nil, err
-	}
-
-	return p.ParseLiteral()
-}
-
-// isAppendLiteral reports whether the message of an APPEND command comes next.
-func isAppendLiteral(p *rfcparser.Parser) bool {
-	return p.Check(rfcparser.TokenTypeLCurly) || p.Check(rfcparser.TokenTypeTilde)
-}

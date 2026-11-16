@@ -10,7 +10,6 @@ import (
 	"github.com/ProtonMail/gluon/imap/command"
 	"github.com/ProtonMail/gluon/internal/response"
 	"github.com/ProtonMail/gluon/internal/state"
-	"github.com/emersion/go-imap/utf7"
 )
 
 var listStatusSkippedAttributes = []string{strings.ToLower(imap.AttrNoSelect), strings.ToLower(imap.AttrNonExistent)}
@@ -41,10 +40,8 @@ func (s *Session) handleListExtended(ctx context.Context, tag string, cmd *comma
 		return err
 	}
 
-	encoder := utf7.Encoding.NewEncoder()
-
 	for _, match := range matches {
-		nameUtf7, err := encoder.String(match.Name)
+		nameUtf7, err := s.mailboxNameFromUTF8(match.Name)
 		if err != nil {
 			return fmt.Errorf("failed to convert name to utf7")
 		}

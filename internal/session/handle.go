@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ProtonMail/gluon/imap/command"
@@ -29,6 +30,8 @@ func (s *Session) handleOther(
 				s.log.WithError(err).WithField("cmd", cmd.SanitizedString()).Error("Command failed")
 				if res, ok := response.FromError(err); ok {
 					resCh <- res
+				} else if errors.Is(err, ErrInvalidUTF8MailboxName) {
+					resCh <- response.Bad(tag).WithError(err)
 				} else {
 					resCh <- response.No(tag).WithError(err)
 				}
@@ -86,6 +89,7 @@ func (s *Session) handleCommand(
 		*command.MyRights,
 		*command.SetMetadata,
 		*command.GetMetadata,
+		*command.Enable,
 		*command.Namespace:
 		return s.handleAuthenticatedCommand(ctx, tag, cmd, ch)
 	case
@@ -261,6 +265,10 @@ func (s *Session) handleAuthenticatedCommand(
 	case *command.GetMetadata:
 		// RFC 5464 GETMETADATA Command
 		return s.handleGetMetadata(ctx, tag, cmd, ch)
+
+	case *command.Enable:
+		// RFC 5161 ENABLE Command
+		return s.handleEnable(ctx, tag, cmd, ch)
 
 	case *command.Namespace:
 		// RFC 2342 NAMESPACE Command
