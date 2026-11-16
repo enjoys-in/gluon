@@ -12,7 +12,7 @@ import (
 
 // GetACL returns the rights every identifier has on the mailbox.
 func (state *State) GetACL(ctx context.Context, name string) ([]imap.ACLEntry, error) {
-	mboxID, err := state.getACLMailboxID(ctx, name)
+	mboxID, err := state.getRemoteMailboxID(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func (state *State) GetACL(ctx context.Context, name string) ([]imap.ACLEntry, e
 // SetACL changes the rights the identifier has on the mailbox. Rights are added to or removed from the ones the
 // identifier has, or replace them, and the connector is given the result.
 func (state *State) SetACL(ctx context.Context, name, identifier, rights string, mode command.ACLMode) error {
-	mboxID, err := state.getACLMailboxID(ctx, name)
+	mboxID, err := state.getRemoteMailboxID(ctx, name)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func (state *State) SetACL(ctx context.Context, name, identifier, rights string,
 
 // DeleteACL removes the rights the identifier has on the mailbox.
 func (state *State) DeleteACL(ctx context.Context, name, identifier string) error {
-	mboxID, err := state.getACLMailboxID(ctx, name)
+	mboxID, err := state.getRemoteMailboxID(ctx, name)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (state *State) DeleteACL(ctx context.Context, name, identifier string) erro
 
 // ListRights returns the rights the identifier always has on the mailbox and the rights that can be granted to it.
 func (state *State) ListRights(ctx context.Context, name, identifier string) (string, []string, error) {
-	mboxID, err := state.getACLMailboxID(ctx, name)
+	mboxID, err := state.getRemoteMailboxID(ctx, name)
 	if err != nil {
 		return "", nil, err
 	}
@@ -91,7 +91,7 @@ func (state *State) ListRights(ctx context.Context, name, identifier string) (st
 
 // MyRights returns the rights the user has on the mailbox.
 func (state *State) MyRights(ctx context.Context, name string) (string, error) {
-	mboxID, err := state.getACLMailboxID(ctx, name)
+	mboxID, err := state.getRemoteMailboxID(ctx, name)
 	if err != nil {
 		return "", err
 	}
@@ -104,9 +104,9 @@ func (state *State) MyRights(ctx context.Context, name string) (string, error) {
 	return withObsoleteRights(rights), nil
 }
 
-// getACLMailboxID returns the connector's ID of the mailbox. The recovery mailbox only exists in Gluon and has no
-// access control list.
-func (state *State) getACLMailboxID(ctx context.Context, name string) (imap.MailboxID, error) {
+// getRemoteMailboxID returns the connector's ID of the mailbox. The recovery mailbox only exists in Gluon, so the
+// connector knows nothing about it.
+func (state *State) getRemoteMailboxID(ctx context.Context, name string) (imap.MailboxID, error) {
 	mbox, err := stateDBReadResult(ctx, state, func(ctx context.Context, client db.ReadOnly) (*db.Mailbox, error) {
 		return client.GetMailboxByName(ctx, name)
 	})

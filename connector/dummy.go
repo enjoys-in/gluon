@@ -39,6 +39,9 @@ type Dummy struct {
 	// bearerToken holds the OAuth 2.0 bearer token that can be used for authorization.
 	bearerToken []byte
 
+	// privateMetadataDisabled makes the connector refuse private annotations.
+	privateMetadataDisabled bool
+
 	// These hold the default flags/attributes given to mailboxes.
 	flags, permFlags, attrs imap.FlagSet
 

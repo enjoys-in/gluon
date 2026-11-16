@@ -267,6 +267,35 @@ func (mr *MockConnectorMockRecorder) GetMyMailboxRights(ctx, mboxID any) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMyMailboxRights", reflect.TypeOf((*MockConnector)(nil).GetMyMailboxRights), ctx, mboxID)
 }
 
+// GetMetadata mocks base method.
+func (m *MockConnector) GetMetadata(ctx context.Context, mboxID imap.MailboxID) ([]imap.MetadataEntry, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMetadata", ctx, mboxID)
+	ret0, _ := ret[0].([]imap.MetadataEntry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMetadata indicates an expected call of GetMetadata.
+func (mr *MockConnectorMockRecorder) GetMetadata(ctx, mboxID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetadata", reflect.TypeOf((*MockConnector)(nil).GetMetadata), ctx, mboxID)
+}
+
+// SetMetadata mocks base method.
+func (m *MockConnector) SetMetadata(ctx context.Context, mboxID imap.MailboxID, entries []imap.MetadataEntry) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetMetadata", ctx, mboxID, entries)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetMetadata indicates an expected call of SetMetadata.
+func (mr *MockConnectorMockRecorder) SetMetadata(ctx, mboxID, entries any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetMetadata", reflect.TypeOf((*MockConnector)(nil).SetMetadata), ctx, mboxID, entries)
+}
+
 // SetQuotaLimits mocks base method.
 func (m *MockConnector) SetQuotaLimits(ctx context.Context, rootName string, limits []imap.QuotaLimit) (*imap.QuotaRoot, error) {
 	m.ctrl.T.Helper()

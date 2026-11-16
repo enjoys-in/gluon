@@ -83,6 +83,8 @@ func (s *Session) handleCommand(
 		*command.GetACL,
 		*command.ListRights,
 		*command.MyRights,
+		*command.SetMetadata,
+		*command.GetMetadata,
 		*command.Namespace,
 		*command.Unauthenticate:
 		return s.handleAuthenticatedCommand(ctx, tag, cmd, ch)
@@ -247,6 +249,14 @@ func (s *Session) handleAuthenticatedCommand(
 	case *command.MyRights:
 		// RFC 4314 MYRIGHTS Command
 		return s.handleMyRights(ctx, tag, cmd, ch)
+
+	case *command.SetMetadata:
+		// RFC 5464 SETMETADATA Command
+		return s.handleSetMetadata(ctx, tag, cmd, ch)
+
+	case *command.GetMetadata:
+		// RFC 5464 GETMETADATA Command
+		return s.handleGetMetadata(ctx, tag, cmd, ch)
 
 	case *command.Namespace:
 		// RFC 2342 NAMESPACE Command

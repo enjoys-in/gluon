@@ -120,6 +120,12 @@ type Connector interface {
 	// GetMyMailboxRights returns the rights the user has on the mailbox.
 	GetMyMailboxRights(ctx context.Context, mboxID imap.MailboxID) (string, error)
 
+	// GetMetadata returns the annotations of the mailbox with the given ID, or of the server for the empty ID.
+	GetMetadata(ctx context.Context, mboxID imap.MailboxID) ([]imap.MetadataEntry, error)
+
+	// SetMetadata changes annotations of the mailbox with the given ID, or of the server for the empty ID.
+	SetMetadata(ctx context.Context, mboxID imap.MailboxID, entries []imap.MetadataEntry) error
+
 	// SetQuotaLimits changes limits of the quota root with the given name and returns the root as it is afterwards.
 	SetQuotaLimits(ctx context.Context, rootName string, limits []imap.QuotaLimit) (*imap.QuotaRoot, error)
 

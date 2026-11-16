@@ -109,6 +109,15 @@ type Connector interface {
 	// returns imap.ACLRights.
 	GetMyMailboxRights(ctx context.Context, mboxID imap.MailboxID) (string, error)
 
+	// GetMetadata returns the annotations of the mailbox with the given ID (RFC 5464). The empty ID stands for the
+	// annotations of the server itself. Gluon picks the entries a client asked for.
+	GetMetadata(ctx context.Context, mboxID imap.MailboxID) ([]imap.MetadataEntry, error)
+
+	// SetMetadata changes annotations of the mailbox with the given ID, or of the server for the empty ID. An entry
+	// with a nil value is removed. Either every entry is changed or none: an entry the connector does not accept is
+	// refused with a MetadataTooBigError, ErrMetadataTooMany or ErrMetadataNoPrivate.
+	SetMetadata(ctx context.Context, mboxID imap.MailboxID, entries []imap.MetadataEntry) error
+
 	// SetQuotaLimits changes limits of the quota root with the given name for SETQUOTA and returns the root as it is
 	// afterwards, which may differ from what was asked when the connector rounds a limit. An error refuses the change:
 	// a connector whose quotas a client may not change returns ErrOperationNotAllowed.

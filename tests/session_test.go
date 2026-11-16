@@ -60,6 +60,7 @@ type Connector interface {
 	SetMailboxQuotaRoot(mailboxName string, rootNames ...string)
 	SetSearchEnabled(value bool)
 	SetBearerToken(token string)
+	SetPrivateMetadataDisabled(value bool)
 }
 
 type testSession struct {

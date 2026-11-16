@@ -103,6 +103,8 @@ func NewParser(s *rfcparser.Scanner, options ...Option) *Parser {
 		"getacl":         &GetACLCommandParser{},
 		"listrights":     &ListRightsCommandParser{},
 		"myrights":       &MyRightsCommandParser{},
+		"setmetadata":    &SetMetadataCommandParser{},
+		"getmetadata":    &GetMetadataCommandParser{},
 	}
 
 	if !builder.disableIMAPAuthenticate {

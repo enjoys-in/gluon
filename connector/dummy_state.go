@@ -18,6 +18,8 @@ type dummyState struct {
 	mailboxes  map[imap.MailboxID]*dummyMailbox
 	lastIMAPID imap.IMAPID
 
+	serverMetadata map[string][]byte
+
 	lock sync.RWMutex
 }
 
@@ -27,6 +29,7 @@ type dummyMailbox struct {
 	unsubscribed bool
 	specialUse   imap.FlagSet
 	acl          map[string]string
+	metadata     map[string][]byte
 }
 
 type dummyMessage struct {
