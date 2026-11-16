@@ -39,6 +39,7 @@ const (
 	ACL              Capability = `ACL`
 	ACLNewRights     Capability = `RIGHTS=texk`
 	METADATA         Capability = `METADATA`
+	BINARY           Capability = `BINARY`
 )
 
 func IsCapabilityAvailableBeforeAuth(c Capability) bool {
@@ -46,7 +47,7 @@ func IsCapabilityAvailableBeforeAuth(c Capability) bool {
 	case IMAP4rev1, StartTLS, IDLE, ID, AUTHPLAIN, LiteralPlus, SASLIR, AUTHOAuthBearer, AUTHXOAuth2:
 		return true
 	case UNSELECT, UIDPLUS, MOVE, QUOTA, SORT, ThreadReferences, NAMESPACE,
-		CHILDREN, SpecialUse, ListExtended, ListStatus, ESEARCH, UNAUTHENTICATE, StatusSize, WITHIN, ESORT, SortDisplay, SEARCHRES, CreateSpecialUse, MULTIAPPEND, UIDBatches, PREVIEW, OBJECTID, QUOTASET, ACL, ACLNewRights, METADATA:
+		CHILDREN, SpecialUse, ListExtended, ListStatus, ESEARCH, UNAUTHENTICATE, StatusSize, WITHIN, ESORT, SortDisplay, SEARCHRES, CreateSpecialUse, MULTIAPPEND, UIDBatches, PREVIEW, OBJECTID, QUOTASET, ACL, ACLNewRights, METADATA, BINARY:
 		return false
 	}
 

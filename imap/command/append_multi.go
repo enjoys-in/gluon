@@ -45,7 +45,7 @@ func parseAppendMessages(p *rfcparser.Parser, size int) ([]AppendMessage, error)
 			}
 		}
 
-		if !p.Check(rfcparser.TokenTypeLCurly) {
+		if !isAppendLiteral(p) {
 			if message.DateTime, err = ParseDateTime(p); err != nil {
 				return nil, err
 			}
@@ -55,7 +55,7 @@ func parseAppendMessages(p *rfcparser.Parser, size int) ([]AppendMessage, error)
 			}
 		}
 
-		if message.Literal, err = p.ParseLiteral(); err != nil {
+		if message.Literal, err = parseAppendLiteral(p); err != nil {
 			return nil, err
 		}
 

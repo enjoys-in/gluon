@@ -97,6 +97,23 @@ func (m *Mailbox) Fetch(ctx context.Context, cmd *command.Fetch, ch chan respons
 			needsLiteral = true
 
 			operations = append(operations, fetchPreview)
+		case *command.FetchAttributeBinary:
+			needsLiteral = true
+			isBodyFetch = true
+
+			if !attribute.Peek {
+				setSeen = true
+			}
+
+			operations = append(operations, func(_ snapMsgWithSeq, _ *db.Message, fc *fetchContext) (response.Item, error) {
+				return fetchBinary(attribute, fc)
+			})
+		case *command.FetchAttributeBinarySize:
+			needsLiteral = true
+
+			operations = append(operations, func(_ snapMsgWithSeq, _ *db.Message, fc *fetchContext) (response.Item, error) {
+				return fetchBinarySize(attribute, fc)
+			})
 		case *command.FetchAttributeEmailID:
 			operations = append(operations, fetchEmailID)
 		case *command.FetchAttributeThreadID:

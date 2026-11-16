@@ -70,7 +70,7 @@ func (AppendCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
 
 	var dateTime time.Time
 	// check date time.
-	if !p.Check(rfcparser.TokenTypeLCurly) {
+	if !isAppendLiteral(p) {
 		dt, err := ParseDateTime(p)
 		if err != nil {
 			return nil, err
@@ -84,7 +84,7 @@ func (AppendCommandParser) FromParser(p *rfcparser.Parser) (Payload, error) {
 	}
 
 	// read literal.
-	literal, err := p.ParseLiteral()
+	literal, err := parseAppendLiteral(p)
 	if err != nil {
 		return nil, err
 	}
