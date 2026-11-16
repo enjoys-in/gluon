@@ -45,6 +45,7 @@ func (s *Session) handleUnauthenticate(ctx context.Context, tag string, _ *comma
 
 	// What the client enabled with ENABLE ends with the login.
 	s.utf8Enabled = false
+	s.uidOnly.Store(false)
 
 	caps := slices.DeleteFunc(slices.Clone(s.caps), func(c imap.Capability) bool {
 		return !imap.IsCapabilityAvailableBeforeAuth(c)

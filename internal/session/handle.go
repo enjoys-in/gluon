@@ -322,6 +322,10 @@ func (s *Session) handleWithMailbox(
 	mailbox *state.Mailbox,
 	ch chan response.Response,
 ) (response.Response, error) {
+	if s.uidOnly.Load() && usesSequenceNumbers(cmd) {
+		return response.Bad(tag).WithItems(response.ItemUIDRequired()).WithError(ErrUIDRequired), nil
+	}
+
 	switch cmd := cmd.(type) {
 	case *command.Check:
 		// 6.4.1. CHECK Command

@@ -204,7 +204,7 @@ func (m *Mailbox) Fetch(ctx context.Context, cmd *command.Fetch, ch chan respons
 			m.log.WithField("UID", msg.UID).WithField("messageID", msg.ID.String()).Debug("Fetch Body")
 		}
 
-		ch <- response.Fetch(msg.Seq).WithItems(items...)
+		ch <- response.Fetch(msg.Seq).ForUID(msg.UID).WithItems(items...)
 
 		return nil
 	}); err != nil {

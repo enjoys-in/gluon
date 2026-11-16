@@ -17,16 +17,22 @@ var (
 	ErrCharsetWithUTF8        = errors.New("a charset cannot be given once UTF8=ACCEPT is enabled")
 )
 
-// handleEnable enables the capabilities that have to be asked for (RFC 5161). UTF8=ACCEPT is the only one. As the
-// RFC asks, other names are ignored and the response lists what this command enabled.
+// handleEnable enables the capabilities that have to be asked for (RFC 5161): UTF8=ACCEPT and UIDONLY. As the RFC
+// asks, other names are ignored and the response lists what this command enabled.
 func (s *Session) handleEnable(_ context.Context, tag string, cmd *command.Enable, ch chan response.Response) error {
 	var enabled []imap.Capability
 
 	for _, capability := range cmd.Capabilities {
-		if strings.EqualFold(capability, string(imap.UTF8Accept)) && !s.utf8Enabled {
+		switch {
+		case strings.EqualFold(capability, string(imap.UTF8Accept)) && !s.utf8Enabled:
 			s.utf8Enabled = true
 
 			enabled = append(enabled, imap.UTF8Accept)
+
+		case strings.EqualFold(capability, string(imap.UIDOnly)) && !s.uidOnly.Load():
+			s.uidOnly.Store(true)
+
+			enabled = append(enabled, imap.UIDOnly)
 		}
 	}
 

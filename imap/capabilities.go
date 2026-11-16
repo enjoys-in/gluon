@@ -43,6 +43,7 @@ const (
 	ENABLE           Capability = `ENABLE`
 	UTF8Accept       Capability = `UTF8=ACCEPT`
 	MessageLimit     Capability = `MESSAGELIMIT`
+	UIDOnly          Capability = `UIDONLY`
 )
 
 func IsCapabilityAvailableBeforeAuth(c Capability) bool {
@@ -50,7 +51,7 @@ func IsCapabilityAvailableBeforeAuth(c Capability) bool {
 	case IMAP4rev1, StartTLS, IDLE, ID, AUTHPLAIN, LiteralPlus, SASLIR, AUTHOAuthBearer, AUTHXOAuth2:
 		return true
 	case UNSELECT, UIDPLUS, MOVE, QUOTA, SORT, ThreadReferences, NAMESPACE,
-		CHILDREN, SpecialUse, ListExtended, ListStatus, ESEARCH, UNAUTHENTICATE, StatusSize, WITHIN, ESORT, SortDisplay, SEARCHRES, CreateSpecialUse, MULTIAPPEND, UIDBatches, PREVIEW, OBJECTID, QUOTASET, ACL, ACLNewRights, METADATA, BINARY, ENABLE, UTF8Accept:
+		CHILDREN, SpecialUse, ListExtended, ListStatus, ESEARCH, UNAUTHENTICATE, StatusSize, WITHIN, ESORT, SortDisplay, SEARCHRES, CreateSpecialUse, MULTIAPPEND, UIDBatches, PREVIEW, OBJECTID, QUOTASET, ACL, ACLNewRights, METADATA, BINARY, ENABLE, UTF8Accept, UIDOnly:
 		return false
 	}
 

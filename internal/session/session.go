@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ProtonMail/gluon/async"
@@ -96,6 +97,9 @@ type Session struct {
 	// unauthenticateDisabled disables the IMAP UNAUTHENTICATE command.
 	unauthenticateDisabled bool
 
+	// uidOnly is set once the client has enabled UIDONLY: messages are then named by their UIDs only (RFC 9586).
+	uidOnly atomic.Bool
+
 	// messageLimit is the most messages one command processes (RFC 9738). Zero means no limit.
 	messageLimit int
 
@@ -128,7 +132,7 @@ func New(
 	inputCollector := command.NewInputCollector(bufio.NewReader(conn))
 	scanner := rfcparser.NewScannerWithReader(inputCollector)
 
-	caps := []imap.Capability{imap.IMAP4rev1, imap.UNSELECT, imap.UIDPLUS, imap.MOVE, imap.ID, imap.QUOTA, imap.SORT, imap.ThreadReferences, imap.NAMESPACE, imap.CHILDREN, imap.SpecialUse, imap.ListExtended, imap.ListStatus, imap.ESEARCH, imap.LiteralPlus, imap.UNAUTHENTICATE, imap.StatusSize, imap.WITHIN, imap.ESORT, imap.SortDisplay, imap.SEARCHRES, imap.CreateSpecialUse, imap.MULTIAPPEND, imap.UIDBatches, imap.PREVIEW, imap.OBJECTID, imap.QUOTASET, imap.ACL, imap.ACLNewRights, imap.METADATA, imap.BINARY, imap.ENABLE, imap.UTF8Accept}
+	caps := []imap.Capability{imap.IMAP4rev1, imap.UNSELECT, imap.UIDPLUS, imap.MOVE, imap.ID, imap.QUOTA, imap.SORT, imap.ThreadReferences, imap.NAMESPACE, imap.CHILDREN, imap.SpecialUse, imap.ListExtended, imap.ListStatus, imap.ESEARCH, imap.LiteralPlus, imap.UNAUTHENTICATE, imap.StatusSize, imap.WITHIN, imap.ESORT, imap.SortDisplay, imap.SEARCHRES, imap.CreateSpecialUse, imap.MULTIAPPEND, imap.UIDBatches, imap.PREVIEW, imap.OBJECTID, imap.QUOTASET, imap.ACL, imap.ACLNewRights, imap.METADATA, imap.BINARY, imap.ENABLE, imap.UTF8Accept, imap.UIDOnly}
 
 	if !featureFlagProvider.GetFlagValue(unleash.CapabilityKillSwitchMap[string(imap.IDLE)]) {
 		caps = append(caps, imap.IDLE)

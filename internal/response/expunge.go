@@ -8,6 +8,7 @@ import (
 
 type expunge struct {
 	seq imap.SeqID
+	uid imap.UID
 }
 
 func Expunge(seq imap.SeqID) *expunge {
@@ -16,7 +17,17 @@ func Expunge(seq imap.SeqID) *expunge {
 	}
 }
 
+// ForUID sets the UID of the message, which names it once the client has enabled UIDONLY.
+func (r *expunge) ForUID(uid imap.UID) *expunge {
+	r.uid = uid
+	return r
+}
+
 func (r *expunge) Send(s Session) error {
+	if isUIDOnly(s) {
+		return s.WriteResponse(r.vanishedString())
+	}
+
 	return s.WriteResponse(r.String())
 }
 

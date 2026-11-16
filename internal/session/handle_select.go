@@ -44,7 +44,8 @@ func (s *Session) handleSelect(ctx context.Context, tag string, cmd *command.Sel
 		ch <- response.Ok().WithItems(response.ItemUIDValidity(mailbox.UIDValidity())).WithMessage("UIDs valid")
 		ch <- response.Ok().WithItems(response.ItemMailboxID(mailbox.ObjectID())).WithMessage("Mailbox ID")
 
-		if unseen, ok := mailbox.GetFirstMessageWithoutFlag(imap.FlagSeen); ok {
+		// UNSEEN gives a message sequence number, which a client that enabled UIDONLY does not get (RFC 9586).
+		if unseen, ok := mailbox.GetFirstMessageWithoutFlag(imap.FlagSeen); ok && !s.uidOnly.Load() {
 			ch <- response.Ok().WithItems(response.ItemUnseen(uint32(unseen.Seq))).WithMessage("Unseen messages")
 		}
 
