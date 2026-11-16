@@ -23,6 +23,8 @@ func newSearchTestDummy(t *testing.T) (*connector.Dummy, imap.MailboxID, imap.Me
 	t.Helper()
 
 	conn := connector.NewDummy([]string{"username"}, []byte("password"), defaultPeriod, defaultFlags, defaultPermanentFlags, defaultAttributes)
+	t.Cleanup(func() { require.NoError(t, conn.Close(context.Background())) })
+
 	conn.SetSearchEnabled(true)
 
 	mboxID := newDummyMailbox(t, conn, "Archive")
