@@ -295,6 +295,30 @@ func (sc *stateConnectorImpl) GetQuotaRoot(ctx context.Context, mailboxName stri
 	return sc.connector.GetQuotaRoot(ctx, mailboxName)
 }
 
+func (sc *stateConnectorImpl) GetMailboxACL(ctx context.Context, mboxID imap.MailboxID) ([]imap.ACLEntry, error) {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	return sc.connector.GetMailboxACL(ctx, mboxID)
+}
+
+func (sc *stateConnectorImpl) SetMailboxACL(ctx context.Context, mboxID imap.MailboxID, identifier string, rights string) error {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	return sc.connector.SetMailboxACL(ctx, mboxID, identifier, rights)
+}
+
+func (sc *stateConnectorImpl) ListMailboxRights(ctx context.Context, mboxID imap.MailboxID, identifier string) (string, []string, error) {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	return sc.connector.ListMailboxRights(ctx, mboxID, identifier)
+}
+
+func (sc *stateConnectorImpl) GetMyMailboxRights(ctx context.Context, mboxID imap.MailboxID) (string, error) {
+	ctx = sc.newContextWithMetadata(ctx)
+
+	return sc.connector.GetMyMailboxRights(ctx, mboxID)
+}
+
 func (sc *stateConnectorImpl) SetQuotaLimits(ctx context.Context, rootName string, limits []imap.QuotaLimit) (*imap.QuotaRoot, error) {
 	ctx = sc.newContextWithMetadata(ctx)
 

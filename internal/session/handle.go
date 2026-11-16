@@ -78,6 +78,11 @@ func (s *Session) handleCommand(
 		*command.GetQuota,
 		*command.GetQuotaRoot,
 		*command.SetQuota,
+		*command.SetACL,
+		*command.DeleteACL,
+		*command.GetACL,
+		*command.ListRights,
+		*command.MyRights,
 		*command.Namespace,
 		*command.Unauthenticate:
 		return s.handleAuthenticatedCommand(ctx, tag, cmd, ch)
@@ -222,6 +227,26 @@ func (s *Session) handleAuthenticatedCommand(
 	case *command.SetQuota:
 		// RFC 9208 SETQUOTA Command
 		return s.handleSetQuota(ctx, tag, cmd, ch)
+
+	case *command.SetACL:
+		// RFC 4314 SETACL Command
+		return s.handleSetACL(ctx, tag, cmd, ch)
+
+	case *command.DeleteACL:
+		// RFC 4314 DELETEACL Command
+		return s.handleDeleteACL(ctx, tag, cmd, ch)
+
+	case *command.GetACL:
+		// RFC 4314 GETACL Command
+		return s.handleGetACL(ctx, tag, cmd, ch)
+
+	case *command.ListRights:
+		// RFC 4314 LISTRIGHTS Command
+		return s.handleListRights(ctx, tag, cmd, ch)
+
+	case *command.MyRights:
+		// RFC 4314 MYRIGHTS Command
+		return s.handleMyRights(ctx, tag, cmd, ch)
 
 	case *command.Namespace:
 		// RFC 2342 NAMESPACE Command

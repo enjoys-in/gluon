@@ -26,6 +26,7 @@ type dummyMailbox struct {
 	exclusive    bool
 	unsubscribed bool
 	specialUse   imap.FlagSet
+	acl          map[string]string
 }
 
 type dummyMessage struct {

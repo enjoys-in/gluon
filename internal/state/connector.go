@@ -108,6 +108,18 @@ type Connector interface {
 	// along with the resource usage for each of those roots.
 	GetQuotaRoot(ctx context.Context, mailboxName string) ([]string, []*imap.QuotaRoot, error)
 
+	// GetMailboxACL returns the rights every identifier has on the mailbox with the given ID.
+	GetMailboxACL(ctx context.Context, mboxID imap.MailboxID) ([]imap.ACLEntry, error)
+
+	// SetMailboxACL gives the identifier exactly the given rights on the mailbox. Empty rights remove the identifier.
+	SetMailboxACL(ctx context.Context, mboxID imap.MailboxID, identifier string, rights string) error
+
+	// ListMailboxRights returns the rights the identifier always has on the mailbox and the rights that can be granted.
+	ListMailboxRights(ctx context.Context, mboxID imap.MailboxID, identifier string) (string, []string, error)
+
+	// GetMyMailboxRights returns the rights the user has on the mailbox.
+	GetMyMailboxRights(ctx context.Context, mboxID imap.MailboxID) (string, error)
+
 	// SetQuotaLimits changes limits of the quota root with the given name and returns the root as it is afterwards.
 	SetQuotaLimits(ctx context.Context, rootName string, limits []imap.QuotaLimit) (*imap.QuotaRoot, error)
 

@@ -93,6 +93,22 @@ type Connector interface {
 	// along with the resource usage for each of those roots.
 	GetQuotaRoot(ctx context.Context, mailboxName string) ([]string, []*imap.QuotaRoot, error)
 
+	// GetMailboxACL returns the rights every identifier has on the mailbox with the given ID (RFC 4314). Rights are
+	// the letters of imap.ACLRights.
+	GetMailboxACL(ctx context.Context, mboxID imap.MailboxID) ([]imap.ACLEntry, error)
+
+	// SetMailboxACL gives the identifier exactly the given rights on the mailbox. Empty rights remove the identifier
+	// from the access control list. An error refuses the change.
+	SetMailboxACL(ctx context.Context, mboxID imap.MailboxID, identifier string, rights string) error
+
+	// ListMailboxRights returns the rights the identifier always has on the mailbox, and the rights that can be
+	// granted to it. Rights that can only be granted together are one element.
+	ListMailboxRights(ctx context.Context, mboxID imap.MailboxID, identifier string) (string, []string, error)
+
+	// GetMyMailboxRights returns the rights the user has on the mailbox. A connector without shared mailboxes
+	// returns imap.ACLRights.
+	GetMyMailboxRights(ctx context.Context, mboxID imap.MailboxID) (string, error)
+
 	// SetQuotaLimits changes limits of the quota root with the given name for SETQUOTA and returns the root as it is
 	// afterwards, which may differ from what was asked when the connector rounds a limit. An error refuses the change:
 	// a connector whose quotas a client may not change returns ErrOperationNotAllowed.

@@ -207,6 +207,66 @@ func (mr *MockConnectorMockRecorder) CreateSpecialUseMailbox(ctx, cache, name, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSpecialUseMailbox", reflect.TypeOf((*MockConnector)(nil).CreateSpecialUseMailbox), ctx, cache, name, attributes)
 }
 
+// GetMailboxACL mocks base method.
+func (m *MockConnector) GetMailboxACL(ctx context.Context, mboxID imap.MailboxID) ([]imap.ACLEntry, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMailboxACL", ctx, mboxID)
+	ret0, _ := ret[0].([]imap.ACLEntry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMailboxACL indicates an expected call of GetMailboxACL.
+func (mr *MockConnectorMockRecorder) GetMailboxACL(ctx, mboxID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMailboxACL", reflect.TypeOf((*MockConnector)(nil).GetMailboxACL), ctx, mboxID)
+}
+
+// SetMailboxACL mocks base method.
+func (m *MockConnector) SetMailboxACL(ctx context.Context, mboxID imap.MailboxID, identifier, rights string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetMailboxACL", ctx, mboxID, identifier, rights)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetMailboxACL indicates an expected call of SetMailboxACL.
+func (mr *MockConnectorMockRecorder) SetMailboxACL(ctx, mboxID, identifier, rights any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetMailboxACL", reflect.TypeOf((*MockConnector)(nil).SetMailboxACL), ctx, mboxID, identifier, rights)
+}
+
+// ListMailboxRights mocks base method.
+func (m *MockConnector) ListMailboxRights(ctx context.Context, mboxID imap.MailboxID, identifier string) (string, []string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListMailboxRights", ctx, mboxID, identifier)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].([]string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListMailboxRights indicates an expected call of ListMailboxRights.
+func (mr *MockConnectorMockRecorder) ListMailboxRights(ctx, mboxID, identifier any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMailboxRights", reflect.TypeOf((*MockConnector)(nil).ListMailboxRights), ctx, mboxID, identifier)
+}
+
+// GetMyMailboxRights mocks base method.
+func (m *MockConnector) GetMyMailboxRights(ctx context.Context, mboxID imap.MailboxID) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMyMailboxRights", ctx, mboxID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMyMailboxRights indicates an expected call of GetMyMailboxRights.
+func (mr *MockConnectorMockRecorder) GetMyMailboxRights(ctx, mboxID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMyMailboxRights", reflect.TypeOf((*MockConnector)(nil).GetMyMailboxRights), ctx, mboxID)
+}
+
 // SetQuotaLimits mocks base method.
 func (m *MockConnector) SetQuotaLimits(ctx context.Context, rootName string, limits []imap.QuotaLimit) (*imap.QuotaRoot, error) {
 	m.ctrl.T.Helper()
